@@ -1,0 +1,14 @@
+apiVersion: v1
+entries:
+  tpl:
+  - apiVersion: v2
+    appVersion: 0.1.0
+    created: "2024-04-05T11:02:49.789038159Z"
+    description: Template chart
+    digest: bda432bc8c8b35e136a376b694476db592a01699761779772965f8c0f9af4931
+    name: tpl
+    type: application
+    urls:
+    - https://github.com/f4k3lol/charts/releases/download/tpl-0.12.0/tpl-0.12.0.tgz
+    version: 0.12.0
+generated: "2024-04-05T11:02:49.789048117Z"
