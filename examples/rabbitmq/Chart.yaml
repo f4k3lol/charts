@@ -1,0 +1,9 @@
+apiVersion: v2
+name: rabbitmq
+description: Chart for deploying rabbitmq single
+type: application
+version: 0.1.0
+dependencies:
+  - repository: "file://../.."
+    name: tpl
+    version: 0.12.0

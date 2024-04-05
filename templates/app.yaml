@@ -1,0 +1,202 @@
+{{- $mergedValues := mustMergeOverwrite (dict) .Values.global .Values }}
+{{- if $mergedValues.containers }}
+---
+apiVersion: apps/v1
+kind: {{ $mergedValues.kind }}
+metadata:
+  name: {{ include "tpl.fullname" . }}
+  labels:
+  {{- include "tpl.labels" . | nindent 4 }}
+spec:
+  {{- if eq $mergedValues.kind "Deployment" }}
+    {{- if not $mergedValues.autoscaling.enabled }}
+  replicas: {{ $mergedValues.replicaCount }}
+    {{- end }}
+    {{- with $mergedValues.strategy }}
+  strategy:
+      {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- else if eq $mergedValues.kind "StatefulSet" }}
+  serviceName: {{ $mergedValues.serviceName }}
+  replicas: {{ $mergedValues.replicaCount }}
+  minReadySeconds: {{ $mergedValues.minReadySeconds }}
+  podManagementPolicy: {{ $mergedValues.podManagementPolicy }}
+    {{- with $mergedValues.updateStrategy }}
+  updateStrategy:
+      {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- with $mergedValues.persistentVolumeClaimRetentionPolicy }}
+  persistentVolumeClaimRetentionPolicy:
+      {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- with $mergedValues.volumeClaimTemplates }}
+  volumeClaimTemplates:
+      {{- range $vct := . }}
+    - metadata:
+        {{- toYaml $vct.metadata | nindent 8 }}
+      spec:
+        {{- toYaml (mustMergeOverwrite (dict) $mergedValues.defaultVolumeClaimTemplateSpec $vct) | nindent 8 }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  selector:
+    matchLabels:
+  {{- include "tpl.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+  {{- with $mergedValues.podAnnotations }}
+    {{- toYaml . | nindent 8 }}
+  {{- end }}
+      labels:
+  {{- include "tpl.selectorLabels" . | nindent 8 }}
+    spec:
+      enableServiceLinks: {{ toString $mergedValues.enableServiceLinks }}
+  {{- with $mergedValues.imagePullSecrets }}
+      imagePullSecrets:
+    {{- toYaml . | nindent 8 }}
+  {{- end }}
+  {{- with $mergedValues.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ . }}
+  {{- end }}
+  {{- with $mergedValues.serviceAccountName }}
+      serviceAccountName: {{ . }}
+  {{- end }}
+  {{- with $mergedValues.restartPolicy }}
+      restartPolicy: {{ . }}
+  {{- end }}
+  {{- with $mergedValues.topologySpreadConstraints }}
+      topologySpreadConstraints:
+  {{- end }}
+  {{- range $tsc := $mergedValues.topologySpreadConstraints }}
+        - labelSelector:
+            matchLabels:
+    {{- include "tpl.selectorLabels" $ | nindent 14 }}
+    {{- toYaml . | nindent 10 }}
+  {{- end }}
+  {{- with $mergedValues.podSecurityContext }}
+      securityContext:
+    {{- toYaml . | nindent 8 }}
+  {{- end }}
+  {{- with $mergedValues.nodeSelector }}
+      nodeSelector:
+    {{- toYaml . | nindent 8 }}
+  {{- end }}
+  {{- with $mergedValues.affinity }}
+      affinity:
+    {{- toYaml . | nindent 8 }}
+  {{- end }}
+  {{- with $mergedValues.tolerations }}
+      tolerations:
+    {{- toYaml . | nindent 8 }}
+  {{- end }}
+  {{- if eq "true" (include "tpl.volumesPresent" $) }}
+      volumes:
+    {{- range $container_name, $container_spec := $mergedValues.containers }}
+      {{- $merged_container_spec := mustMergeOverwrite (dict) $mergedValues.defaultContainer $container_spec }}
+      {{- range $config_name, $config_spec := $merged_container_spec.configs }}
+        {{- if eq $config_spec.from "configMap" }}
+      - name: {{ $config_name }}-{{ $config_spec.from }}-mount
+        configMap:
+          name: {{ $config_spec.name }}
+        {{- else if eq $config_spec.from "secret" }}
+      - name: {{ $config_name }}-{{ $config_spec.from }}-mount
+        secret:
+          secretName: {{ $config_spec.name }}
+        {{- end }}
+      {{- end }}
+      {{- range $volume := $merged_container_spec.volumes }}
+      - name: {{ $volume.name }}
+        {{- if hasKey $volume "emptyDir" }}
+        emptyDir: {{ $volume.emptyDir | toYaml | nindent 10 }}
+        {{- else if hasKey $volume "existingClaim" }}
+        persistentVolumeClaim:
+          claimName: {{ $volume.existingClaim }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+      containers:
+  {{- range $container_name, $container_spec := $mergedValues.containers }}
+    {{- if $container_spec }}
+      {{- $merged_container_spec := mustMergeOverwrite (dict) $mergedValues.defaultContainer $container_spec }}
+      - name: {{ $container_name }}
+        image: {{ with $merged_container_spec.image.registry -}}{{- . -}}/{{- end -}}
+        {{- with $merged_container_spec.image.baseRepository -}}{{- . -}}/{{- end -}}
+        {{- with $merged_container_spec.image.repository -}}{{- . -}}/{{- end -}}
+        {{- with $merged_container_spec.image.tag -}}{{- . -}}/{{- end }}
+        imagePullPolicy: {{ $merged_container_spec.imagePullPolicy }}
+      {{- with $merged_container_spec.ports }}
+        ports:
+        {{- range $port_spec := . }}
+        - name: {{ $port_spec.name }}
+          containerPort: {{ $port_spec.containerPort }}
+          protocol: {{ $port_spec.protocol }}
+        {{- end }}
+      {{- end }}
+      {{- with $merged_container_spec.livenessProbe }}
+        livenessProbe:
+        {{- toYaml . | nindent 10 }}
+      {{- end }}
+      {{- with $merged_container_spec.readinessProbe }}
+        readinessProbe:
+        {{- toYaml . | nindent 10 }}
+      {{- end }}
+      {{- with $merged_container_spec.resources }}
+        resources:
+        {{- toYaml . | nindent 10 }}
+      {{- end }}
+      {{- with $merged_container_spec.securityContext }}
+        securityContext:
+        {{- toYaml . | nindent 10 }}
+      {{- end }}
+      {{- with $merged_container_spec.command }}
+        command:
+        {{- toYaml . | nindent 10 }}
+      {{- end }}
+      {{- with $merged_container_spec.args }}
+        args:
+        {{- toYaml . | nindent 10 }}
+      {{- end }}
+      {{- if coalesce $merged_container_spec.volumes $merged_container_spec.configs }}
+        volumeMounts:
+        {{- range $config_name, $config_spec := $merged_container_spec.configs }}
+        - name: {{ $config_name }}-{{ $config_spec.from }}-mount
+          mountPath: {{ $config_spec.mountPath }}
+          subPath: {{ $config_spec.key }}
+          readOnly: true
+        {{- end }}
+        {{- range $volume := $merged_container_spec.volumes }}
+        - name: {{ $volume.name }}
+          mountPath: {{ $volume.mountPath }}
+          {{- with $volume.subPath }}
+          subPath: {{ . }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+      {{- if $merged_container_spec.env }}
+        env:
+        {{- range $env_name, $env_spec := $merged_container_spec.env }}
+          {{- if $env_spec }}
+            {{- if and (hasKey $env_spec "value") $env_spec.value }}
+        - name: {{ $env_name }}
+          value: {{ include "tpl.render" (list $ . $env_spec.value) }}
+            {{- else if eq $env_spec.from "configMap" }}
+        - name: {{ $env_name }}
+          valueFrom:
+            configMapKeyRef:
+              name: {{ $env_spec.name }}
+              key: {{ $env_spec.key }}
+            {{- else if eq $env_spec.from "secret" }}
+        - name: {{ $env_name }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ $env_spec.name }}
+              key: {{ $env_spec.key }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}

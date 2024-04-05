@@ -1,0 +1,51 @@
+app1:
+  containers:
+    app:
+      image:
+        repository: app1
+        tag: v1
+      resources:
+        requests:
+          memory: 100Mi
+          cpu: 0.1
+        limits:
+          memory: 200Mi
+          cpu: 0.2
+      env:
+        APP_NAME: { value: APP1 }
+
+  services:
+    app1:
+      ports:
+        - name: http
+          port: 8000
+      ingresses:
+        app1:
+          paths: [{ path: /app1 }]
+          servicePortNumber: 8000
+
+app2:
+  containers:
+    app:
+      image:
+        repository: app2
+        tag: v1
+      resources:
+        requests:
+          memory: 100Mi
+          cpu: 0.1
+        limits:
+          memory: 200Mi
+          cpu: 0.2
+      env:
+        APP_NAME: { value: APP2 }
+
+  services:
+    app2:
+      ports:
+        - name: http
+          port: 8000
+      ingresses:
+        app2:
+          paths: [{ path: /app2 }]
+          servicePortName: http

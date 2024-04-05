@@ -1,0 +1,15 @@
+global:
+  host: test.com
+
+  defaultContainer:
+    image:
+      registry: global.my.registry
+      baseRepository: global
+
+  defaultIngress:
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt
+    hosts: ["{{ $.Values.global.host }}"]
+    tls:
+      - hosts: ["{{ $.Values.global.host }}"]
+        secretName: mycert

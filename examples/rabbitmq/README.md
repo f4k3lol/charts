@@ -1,0 +1,1 @@
+helm dependency build && helm install  --disable-openapi-validation --dry-run test .

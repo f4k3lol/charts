@@ -1,0 +1,107 @@
+# global values. merged into .Values ({{- $mergedValues := mustMergeOverwrite (dict) .Values.global .Values }})
+global:
+  # can be StatefulSet or Deployment (default)
+  kind: Deployment
+  # common vars
+  replicaCount: 1
+  imagePullSecrets: []
+  nameOverride: ""
+  fullnameOverride: ""
+  podAnnotations: {}
+  podSecurityContext: {}
+  enableServiceLinks: false
+  nodeSelector: {}
+  topologySpreadConstraints: []
+  tolerations: []
+  affinity: {}
+  extraManifests: []
+  terminationGracePeriodSeconds: null
+  restartPolicy: ""
+  # deployment vars, if kind != Deployment - not used
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 20
+    behavior: {}
+    metrics: []
+  strategy:
+    type: RollingUpdate
+  # statefulset vars, if kind != StatefulSet - not used
+  volumeClaimTemplates: []
+  serviceName: ""
+  minReadySeconds: 0
+  podManagementPolicy: OrderedReady
+  updateStrategy:
+    type: RollingUpdate
+  persistentVolumeClaimRetentionPolicy: Retain
+
+  # volumeClaimTemplate spec defaults. merged into each volumeClaimTemplate spec
+  defaultVolumeClaimTemplateSpec:
+    accessModes: ["ReadWriteOnce"]
+
+  # container defaults. merged into each container spec
+  defaultContainer:
+    image:
+      registry: ""
+      baseRepository: ""
+      repository: ""
+      tag: ""
+    imagePullPolicy: IfNotPresent
+    volumes:
+    resources:
+    livenessProbe:
+    readinessProbe:
+    command:
+    args:
+    env:
+    configs:
+
+  # service defaults. merged into each service spec
+  defaultService:
+    annotations: {}
+    ports: []
+
+  # ingress defaults. merged into each ingress spec
+  defaultIngress:
+    className: nginx
+    tls: []
+    annotations: {}
+    hosts: []
+    paths: [{ path: "/" }]
+    defaultPathType: ImplementationSpecific
+
+defaultContainer: {}
+#   image:
+#     registry: ""
+#     baseRepository: ""
+#     repository: ""
+#     tag: ""
+#   imagePullPolicy: IfNotPresent
+#   volumes:
+#   resources:
+#   livenessProbe:
+#   readinessProbe:
+#   command:
+#   args:
+#   env:
+#   configs:
+
+defaultService: {}
+#   type: ClusterIP
+#   annotations: {}
+#   ports: []
+#     - name: http
+#       port: 8000
+#       protocol: TCP
+#       nodePort: 8080
+#       targetPort: 80, default -> port
+
+defaultIngress: {}
+#   className: nginx
+#   tls: []
+#   annotations: {}
+#   hosts: []
+#   paths: [{ path: /, type: Prefix }, { path: /v2 }]
+#   defaultPathType: ImplementationSpecific
+#   servicePortNumber: 8000 or
+#   servicePortName: http

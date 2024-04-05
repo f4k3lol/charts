@@ -1,0 +1,72 @@
+{{- range $svc_name, $svc_spec := .Values.services }}
+  {{- $merged_svc_spec := mustMergeOverwrite (dict) $.Values.global.defaultService $.Values.defaultService $svc_spec }}
+  {{- range $ingress_name, $ingress_spec := $merged_svc_spec.ingresses }}
+    {{- $merged_ingress_spec := mustMergeOverwrite (dict) $.Values.global.defaultIngress $.Values.defaultIngress $ingress_spec }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $ingress_name }}
+  labels:
+    {{- include "tpl.labels" $ | nindent 4 }}
+    {{- with $merged_ingress_spec.annotations }}
+  annotations:
+      {{- include "tpl.render" (list $ . (toYaml .)) | nindent 4 }}
+    {{- end }}
+spec:
+  ingressClassName: {{ $merged_ingress_spec.className }}
+    {{- with $merged_ingress_spec.tls }}
+  tls:
+      {{- range $tls_spec := . }}
+        {{- if $tls_spec.secretName }}
+    secretName: {{ include "tpl.render" (list $ . $tls_spec.secretName) }}
+        {{- end }}
+        {{- with $tls_spec.hosts }}
+    hosts:
+          {{- range $host := . }}
+      - {{ include "tpl.render" (list $ . $host) }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  rules:
+    {{- if $merged_ingress_spec.hosts }}
+      {{- range $host := $merged_ingress_spec.hosts }}
+    - host: {{ include "tpl.render" (list $ . $host) }}
+      http:
+        paths:
+        {{- range $path := $merged_ingress_spec.paths }}
+          - path: {{ $path.path }}
+            pathType: {{ $path.type | default $merged_ingress_spec.defaultPathType }}
+            backend:
+              service:
+                name: {{ $svc_name }}
+                port:
+          {{- with $merged_ingress_spec.servicePortNumber }}
+                  number: {{ . }}
+          {{- end }}
+          {{- with $merged_ingress_spec.servicePortName }}
+                  name: {{ . }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+    {{- else }}
+    - http:
+        paths:
+      {{- range $path := $merged_ingress_spec.paths }}
+          - path: {{ $path.path | quote }}
+            pathType: {{ $path.type  }}
+            backend:
+              service:
+                name: {{ $svc_name }}
+                port:
+        {{- with $merged_ingress_spec.servicePortNumber }}
+                  number: {{ . }}
+        {{- end }}
+        {{- with $merged_ingress_spec.servicePortName }}
+                  name: {{ . }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}

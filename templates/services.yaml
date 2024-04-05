@@ -1,0 +1,41 @@
+{{- range $svc_name, $svc_spec := .Values.services }}
+  {{- $merged_svc_spec := mustMergeOverwrite (dict) $.Values.global.defaultService $.Values.defaultService $svc_spec }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $svc_name }}
+  {{- with $merged_svc_spec.annotations }}
+  annotations:
+      {{- include "tpl.render" (list $ . (toYaml .)) | nindent 4 }}
+  {{- end }}
+  labels:
+  {{- include "tpl.labels" $ | nindent 4 }}
+spec:
+  selector:
+  {{- include "tpl.selectorLabels" $ | nindent 4 }}
+  {{- with $merged_svc_spec.type }}
+  type: {{ . }}
+  {{- end }}
+  {{- with $merged_svc_spec.clusterIP }}
+  clusterIP: {{ . }}
+  {{- end }}
+  {{- with $merged_svc_spec.loadBalancerIP }}
+  loadBalancerIP: {{ . }}
+  {{- end }}
+  {{- with $merged_svc_spec.externalName }}
+  externalName: {{ . }}
+  {{- end }}
+  ports:
+  {{- range $port_spec := $merged_svc_spec.ports }}
+  - name: {{ $port_spec.name }}
+    {{- with $port_spec.protocol }}
+    protocol: {{ . }}
+    {{- end }}
+    port: {{ $port_spec.port }}
+    targetPort: {{ $port_spec.targetPort | default $port_spec.port }}
+    {{- if $port_spec.NodePort }}
+    nodePort: {{ $port_spec.nodePort | default $port_spec.port }}
+    {{- end }}
+  {{- end }}
+{{- end }}

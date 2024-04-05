@@ -1,0 +1,136 @@
+# helm install --dry-run test . -f test.yaml --disable-openapi-validation
+global:
+  testTplVar: testtplvarval
+  defaultContainer:
+    image:
+      registry: xxx
+      baseRepository: cads
+
+
+# kind: StatefulSet
+# terminationGracePeriodSeconds: 40
+tpl:
+  containers:
+    # первый контейнер - rabbitmq
+    rabbitmq:
+      # enabled: false
+      image:
+        # registry: "" - применяется дефолт из defaultContainer
+        # registry: local.repo/
+        baseRepository: test
+        repository: rabbitmq
+        tag: '3.11.3-management'
+      volumes:
+        - name: rabbitmq
+          #existingClaim: rabbitmq
+          emptyDir:
+            sizeLimit: 500Mi
+          mountPath: /var/lib/rabbitmq
+      # объявление ресурсов
+      resources:
+        requests:
+          memory: 2Gi
+          cpu: 700m
+        limits:
+          memory: 6Gi
+          cpu: 2
+      # livenessProbe
+      livenessProbe:
+        exec:
+          command:
+          - rabbitmq-diagnostics
+          - -q
+          - ping
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        timeoutSeconds: 5
+        failureThreshold: 5
+      # конфиг маунтится через configmap, который рендерится через tpl. можно использовать переменные чарта
+      configs:
+        rabbitmq-conf1:
+          mountPath: /etc/rabbitmq/conf.d/rabbitmq1.conf
+          from: configMap
+          name: cmap1
+          key: key1
+        rabbitmq-conf2:
+          mountPath: /etc/rabbitmq/conf.d/rabbitmq2.conf
+          from: secret
+          name: secret1
+          key: key1
+      env:
+        RABBITMQ_NODENAME:
+          value: rabbit@rabbitmq
+        RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS:
+          value: -rabbit consumer_timeout 72000000
+        RABBITMQ_DEFAULT_USER: { from: configMap, name: rabbitmq, key: user }
+        RABBITMQ_DEFAULT_PASS: { from: secret, name: rabbitmq, key: pass }
+
+  services:
+    rabbitmq:
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '15692'
+        prometheus.io/path: '/metrics/per-object'
+      clusterIP: None
+      ports:
+        - name: mq
+          port: 5672
+        - name: management
+          port: 15672
+        - name: exporter
+          port: 15692
+      ingresses:
+        rabbitmq:
+          # className: nginx - применяется дефолт
+          # hosts: [] - применяется дефолт
+          # backend: service: name: rabbitmq - бекендом будет сервис в котором обозначен ингресс, изменить нельзя
+          # tls:
+          #   - hosts:
+          #     - test.online
+          #     secretName: test-cert
+          paths:
+            - path: /rabbitmq
+              # type: ImplementationSpecific - дефолт
+            - path: /rabbitmq2
+              type: Prefix
+          servicePortNumber: 15672
+
+  configMaps:
+    cmap1:
+      data:
+        key1: |
+          management.path_prefix=/rabbitmq
+          testval=2
+    cmap2:
+      data:
+        key1: "val1"
+    rabbitmq:
+      data:
+        user: rabbitmq
+
+  secrets:
+    secret1:
+      stringData:
+        key1: |
+          management.path_prefix=/rabbitmq
+          testval={{ $.Values.global.testTplVar }}
+    secret2:
+      stringData:
+        key1: "val1"
+    rabbitmq:
+      stringData:
+        pass: verysecurerabbitmq
+
+  extraManifests:
+    - |
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: my-service
+      spec:
+        selector:
+          app.kubernetes.io/name: MyApp
+        ports:
+          - protocol: TCP
+            port: 80
+            targetPort: 9376

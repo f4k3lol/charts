@@ -1,0 +1,16 @@
+apiVersion: v2
+name: set-of-apps
+description: Chart for deploying set of apps
+type: application
+version: 0.1.0
+dependencies:
+  - alias: app1
+    repository: "file://../.."
+    name: tpl
+    version: 0.12.0
+    condition: app1.enabled
+  - alias: app2
+    repository: "file://../.."
+    name: tpl
+    version: 0.12.0
+    condition: app2.enabled
