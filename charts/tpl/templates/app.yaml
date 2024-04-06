@@ -121,10 +121,10 @@ spec:
     {{- if $container_spec }}
       {{- $merged_container_spec := mustMergeOverwrite (dict) $mergedValues.defaultContainer $container_spec }}
       - name: {{ $container_name }}
-        image: {{ with $merged_container_spec.image.registry -}}{{- . -}}/{{- end -}}
-        {{- with $merged_container_spec.image.baseRepository -}}{{- . -}}/{{- end -}}
-        {{- with $merged_container_spec.image.repository -}}{{- . -}}/{{- end -}}
-        {{- with $merged_container_spec.image.tag -}}{{- . -}}/{{- end }}
+        image: {{ with $merged_container_spec.image.registry -}}{{- include "tpl.render" (list $ . .) -}}/{{- end -}}
+        {{- with $merged_container_spec.image.baseRepository -}}{{- include "tpl.render" (list $ . .) -}}/{{- end -}}
+        {{- with $merged_container_spec.image.repository -}}{{- include "tpl.render" (list $ . .) -}}:{{- end -}}
+        {{- with $merged_container_spec.image.tag -}}{{- include "tpl.render" (list $ . .) -}}{{- end }}
         imagePullPolicy: {{ $merged_container_spec.imagePullPolicy }}
       {{- with $merged_container_spec.ports }}
         ports:
