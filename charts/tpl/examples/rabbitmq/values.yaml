@@ -28,8 +28,8 @@ tpl:
         repository: rabbitmq
         tag: '3.11.3-management'
       volumes:
-        - name: rabbitmq
-          existingClaim: rabbitmq
+        - name: data
+          existingClaim: data
           subPath: data
           mountPath: /var/lib/rabbitmq
       # объявление ресурсов

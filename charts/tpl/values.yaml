@@ -31,9 +31,10 @@ global:
   serviceName: ""
   minReadySeconds: 0
   podManagementPolicy: OrderedReady
-  updateStrategy:
-    type: RollingUpdate
-  persistentVolumeClaimRetentionPolicy: Retain
+  # updateStrategy:
+  #   type: RollingUpdate
+  # persistentVolumeClaimRetentionPolicy:
+  #   whenDeleted: Retain
 
   # volumeClaimTemplate defaults. merged into each volumeClaimTemplate
   defaultVolumeClaimTemplate:
