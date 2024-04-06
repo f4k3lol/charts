@@ -10,6 +10,7 @@ global:
 # kind: StatefulSet
 # terminationGracePeriodSeconds: 40
 tpl:
+  kind: StatefulSet
   containers:
     # первый контейнер - rabbitmq
     rabbitmq:

@@ -26,8 +26,7 @@ spec:
       {{- toYaml . | nindent 4 }}
     {{- end }}
     {{- with $mergedValues.persistentVolumeClaimRetentionPolicy }}
-  persistentVolumeClaimRetentionPolicy:
-      {{- toYaml . | nindent 4 }}
+  persistentVolumeClaimRetentionPolicy: {{ . }}
     {{- end }}
     {{- with $mergedValues.volumeClaimTemplates }}
   volumeClaimTemplates:
