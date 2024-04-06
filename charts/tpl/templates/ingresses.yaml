@@ -18,14 +18,10 @@ spec:
     {{- with $merged_ingress_spec.tls }}
   tls:
       {{- range $tls_spec := . }}
-        {{- if $tls_spec.secretName }}
-    secretName: {{ include "tpl.render" (list $ . $tls_spec.secretName) }}
-        {{- end }}
-        {{- with $tls_spec.hosts }}
+  - secretName: {{ include "tpl.render" (list $ . $tls_spec.secretName) }}
     hosts:
-          {{- range $host := . }}
+        {{- range $host := $tls_spec.hosts }}
       - {{ include "tpl.render" (list $ . $host) }}
-          {{- end }}
         {{- end }}
       {{- end }}
     {{- end }}

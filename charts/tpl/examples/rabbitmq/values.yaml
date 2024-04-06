@@ -84,10 +84,10 @@ tpl:
           # className: nginx - применяется дефолт
           # hosts: [] - применяется дефолт
           # backend: service: name: rabbitmq - бекендом будет сервис в котором обозначен ингресс, изменить нельзя
-          # tls:
-          #   - hosts:
-          #     - test.online
-          #     secretName: test-cert
+          tls:
+            - hosts:
+              - test.online
+              secretName: test-cert
           paths:
             - path: /rabbitmq
               # type: ImplementationSpecific - дефолт
