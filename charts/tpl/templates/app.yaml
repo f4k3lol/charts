@@ -178,7 +178,7 @@ spec:
           {{- if $env_spec }}
             {{- if and (hasKey $env_spec "value") $env_spec.value }}
         - name: {{ $env_name }}
-          value: {{ include "tpl.render" (list $ . $env_spec.value) }}
+          value: {{ include "tpl.render" (list $ . $env_spec.value) | quote }}
             {{- else if eq $env_spec.from "configMap" }}
         - name: {{ $env_name }}
           valueFrom:
