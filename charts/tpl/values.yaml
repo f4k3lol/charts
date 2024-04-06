@@ -35,9 +35,10 @@ global:
     type: RollingUpdate
   persistentVolumeClaimRetentionPolicy: Retain
 
-  # volumeClaimTemplate spec defaults. merged into each volumeClaimTemplate spec
-  defaultVolumeClaimTemplateSpec:
-    accessModes: ["ReadWriteOnce"]
+  # volumeClaimTemplate defaults. merged into each volumeClaimTemplate
+  defaultVolumeClaimTemplate:
+    spec:
+      accessModes: ["ReadWriteOnce"]
 
   # container defaults. merged into each container spec
   defaultContainer:
@@ -105,3 +106,5 @@ defaultIngress: {}
 #   defaultPathType: ImplementationSpecific
 #   servicePortNumber: 8000 or
 #   servicePortName: http
+
+defaultVolumeClaimTemplate: {}

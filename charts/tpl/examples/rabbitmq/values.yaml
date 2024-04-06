@@ -5,12 +5,18 @@ global:
     image:
       registry: xxx
       baseRepository: cads
+  defaultVolumeClaimTemplate:
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 4Gi
 
-
-# kind: StatefulSet
-# terminationGracePeriodSeconds: 40
 tpl:
   kind: StatefulSet
+  volumeClaimTemplates:
+  - metadata:
+      name: data
   containers:
     # первый контейнер - rabbitmq
     rabbitmq:
@@ -23,9 +29,8 @@ tpl:
         tag: '3.11.3-management'
       volumes:
         - name: rabbitmq
-          #existingClaim: rabbitmq
-          emptyDir:
-            sizeLimit: 500Mi
+          existingClaim: rabbitmq
+          subPath: data
           mountPath: /var/lib/rabbitmq
       # объявление ресурсов
       resources:

@@ -31,10 +31,8 @@ spec:
     {{- with $mergedValues.volumeClaimTemplates }}
   volumeClaimTemplates:
       {{- range $vct := . }}
-    - metadata:
-        {{- toYaml $vct.metadata | nindent 8 }}
-      spec:
-        {{- toYaml (mustMergeOverwrite (dict) $mergedValues.defaultVolumeClaimTemplateSpec $vct) | nindent 8 }}
+        {{- $mergedVct := mustMergeOverwrite (dict) $mergedValues.defaultVolumeClaimTemplate $vct }}
+        {{- include "tpl.render" (list $ . (toYaml (list $mergedVct))) | nindent 2 }}
       {{- end }}
     {{- end }}
   {{- end }}
