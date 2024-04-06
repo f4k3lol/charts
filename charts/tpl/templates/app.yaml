@@ -10,7 +10,7 @@ metadata:
 spec:
   {{- if eq $mergedValues.kind "Deployment" }}
     {{- if not $mergedValues.autoscaling.enabled }}
-  replicas: {{ $mergedValues.replicaCount }}
+  replicas: {{ $mergedValues.replicas }}
     {{- end }}
     {{- with $mergedValues.strategy }}
   strategy:
@@ -18,7 +18,7 @@ spec:
     {{- end }}
   {{- else if eq $mergedValues.kind "StatefulSet" }}
   serviceName: {{ $mergedValues.serviceName }}
-  replicas: {{ $mergedValues.replicaCount }}
+  replicas: {{ $mergedValues.replicas }}
   minReadySeconds: {{ $mergedValues.minReadySeconds }}
   podManagementPolicy: {{ $mergedValues.podManagementPolicy }}
     {{- with $mergedValues.updateStrategy }}
