@@ -187,7 +187,7 @@ spec:
         {{- end }}
         {{- range $env_name, $env_spec := . }}
           {{- if $env_spec }}
-            {{- if and (hasKey $env_spec "value") $env_spec.value }}
+            {{- if (hasKey $env_spec "value") }}
         - name: {{ $env_name }}
           value: {{ include "tpl.render" (list $ . $env_spec.value) | quote }}
             {{- end }}
