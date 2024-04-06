@@ -94,11 +94,11 @@ spec:
       {{- $merged_container_spec := mustMergeOverwrite (dict) $mergedValues.defaultContainer $container_spec }}
       {{- range $config_name, $config_spec := $merged_container_spec.configs }}
         {{- if eq $config_spec.from "configMap" }}
-      - name: {{ $config_name }}-{{ $config_spec.from }}-mount
+      - name: {{ $config_name }}-cmap-mount
         configMap:
           name: {{ $config_spec.name }}
         {{- else if eq $config_spec.from "secret" }}
-      - name: {{ $config_name }}-{{ $config_spec.from }}-mount
+      - name: {{ $config_name }}-secret-mount
         secret:
           secretName: {{ $config_spec.name }}
         {{- end }}
@@ -159,7 +159,7 @@ spec:
       {{- if coalesce $merged_container_spec.volumes $merged_container_spec.configs }}
         volumeMounts:
         {{- range $config_name, $config_spec := $merged_container_spec.configs }}
-        - name: {{ $config_name }}-{{ $config_spec.from }}-mount
+        - name: {{ $config_name }}-{{ if eq $config_spec.from "secret" }}secret{{ else if eq $config_spec.from "configMap" }}cmap{{ end }}-mount
           mountPath: {{ $config_spec.mountPath }}
           subPath: {{ $config_spec.key }}
           readOnly: true
