@@ -176,7 +176,7 @@ spec:
         env:
         {{- range $env_name, $env_spec := . }}
           {{- if $env_spec }}
-            {{- if not (hasKey $env_spec "value") }}
+            {{- if (quote $env_spec.value | empty) }}
         - name: {{ $env_name }}
           valueFrom:
             {{ $env_spec.from }}KeyRef:
@@ -187,7 +187,7 @@ spec:
         {{- end }}
         {{- range $env_name, $env_spec := . }}
           {{- if $env_spec }}
-            {{- if (hasKey $env_spec "value") }}
+            {{- if not (quote $env_spec.value | empty)}}
         - name: {{ $env_name }}
           value: {{ include "tpl.render" (list $ . $env_spec.value) | quote }}
             {{- end }}

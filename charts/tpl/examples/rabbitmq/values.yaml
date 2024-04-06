@@ -70,7 +70,7 @@ tpl:
           value: rabbit@rabbitmq
         RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS:
           value: -rabbit consumer_timeout 72000000
-        RABBITMQ_DEFAULT_USER: { from: configMap, name: rabbitmq, key: user }
+        RABBITMQ_DEFAULT_USER: { value: null, from: configMap, name: rabbitmq, key: user }
         RABBITMQ_DEFAULT_PASS: { from: secret, name: rabbitmq, key: pass }
 
   services:
