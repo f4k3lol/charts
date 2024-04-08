@@ -1,47 +1,62 @@
-# global values. merged into .Values ({{- $mergedValues := mustMergeOverwrite (dict) .Values.global .Values }})
 global:
-  # can be StatefulSet or Deployment (default)
+  # -- can be StatefulSet or Deployment (default)
   kind: Deployment
-  # common vars
+  # -- k8s replicas
   replicas: 1
+  # -- k8s imagePullSecrets
   imagePullSecrets: []
+  # -- chart nameOverride. should be used in multiple-dependency mode, for correct selectorLabels render
   nameOverride: ""
   fullnameOverride: ""
+  # -- k8s podAnnotations
   podAnnotations: {}
+  # -- k8s podSecurityContext
   podSecurityContext: {}
+  # -- k8s enableServiceLinks
   enableServiceLinks: false
+  # -- k8s nodeSelector
   nodeSelector: {}
+  # -- k8s topologySpreadConstraints
   topologySpreadConstraints: []
+  # -- k8s tolerations
   tolerations: []
+  # -- k8s affinity
   affinity: {}
+  # -- Raw k8s manifests, rendered as is
   extraManifests: []
+  # -- k8s terminationGracePeriodSeconds
   terminationGracePeriodSeconds: null
+  # -- k8s terminationGracePeriodSeconds
   restartPolicy: ""
-  # deployment vars, if kind != Deployment - not used
+  # -- k8s hpa settings
   autoscaling:
     enabled: false
     minReplicas: 1
     maxReplicas: 20
     behavior: {}
     metrics: []
+  # -- k8s strategy
   strategy:
     type: RollingUpdate
-  # statefulset vars, if kind != StatefulSet - not used
+  # -- k8s sts volumeClaimTemplates
   volumeClaimTemplates: []
+  # -- k8s sts serviceName
   serviceName: ""
+  # -- k8s sts minReadySeconds
   minReadySeconds: 0
+  # -- k8s sts podManagedPolicy
   podManagementPolicy: OrderedReady
-  # updateStrategy:
-  #   type: RollingUpdate
-  # persistentVolumeClaimRetentionPolicy:
-  #   whenDeleted: Retain
+  # -- k8s sts updateStrategy
+  updateStrategy: {}
+  # -- k8s sts persistentVolumeClaimRetentionPolicy
+  persistentVolumeClaimRetentionPolicy: {}
 
-  # volumeClaimTemplate defaults. merged into each volumeClaimTemplate
+  # -- k8s volumeClaimTemplate defaults. merged into each volumeClaimTemplate
   defaultVolumeClaimTemplate:
     spec:
       accessModes: ["ReadWriteOnce"]
 
-  # container defaults. merged into each container spec
+  # -- k8s container defaults. merged into each container
   defaultContainer:
     image:
       registry: ""
@@ -58,12 +73,12 @@ global:
     env:
     configs:
 
-  # service defaults. merged into each service spec
+  # -- k8s service defaults. merged into each service
   defaultService:
     annotations: {}
     ports: []
 
-  # ingress defaults. merged into each ingress spec
+  # -- k8s ingress defaults. merged into each ingress
   defaultIngress:
     className: nginx
     tls: []
@@ -72,6 +87,7 @@ global:
     paths: [{ path: "/" }]
     defaultPathType: ImplementationSpecific
 
+# -- k8s container defaults. merged into each container
 defaultContainer: {}
 #   image:
 #     registry: ""
@@ -88,6 +104,7 @@ defaultContainer: {}
 #   env:
 #   configs:
 
+# -- k8s service defaults. merged into each service
 defaultService: {}
 #   type: ClusterIP
 #   annotations: {}
@@ -98,6 +115,7 @@ defaultService: {}
 #       nodePort: 8080
 #       targetPort: 80, default -> port
 
+# -- k8s ingress defaults. merged into each ingress
 defaultIngress: {}
 #   className: nginx
 #   tls: []
@@ -108,4 +126,14 @@ defaultIngress: {}
 #   servicePortNumber: 8000 or
 #   servicePortName: http
 
+# -- k8s volumeClaimTemplate defaults. merged into each volumeClaimTemplate
 defaultVolumeClaimTemplate: {}
+
+# -- k8s secrets. Use this to define secrets
+secrets: {}
+# -- k8s configMaps. Use this to define configMaps
+configMaps: {}
+# -- k8s containers. Use this to define containers
+containers: {}
+# -- k8s services. Use this to define services
+services: {}

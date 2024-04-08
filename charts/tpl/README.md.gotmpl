@@ -1,0 +1,11 @@
+{{ template "chart.header" . }}
+{{ template "chart.description" . }}
+## Values mergings process
+1. Values merged using function mustMergreOverride
+2. `.Values.global` merged into `.Values` resulting into `$mergedValues`
+3. `$mergedValues.defaultContainer` merged into each container `$mergedValues.containers.x`
+4. `$mergedValues.defaultService` merged into each service `$mergedValues.services.x`
+5. `$mergedValues.defaultIngress` merged into each ingress `$mergedValues.services.x.ingresses.y`
+6. `$mergedValues.defaultVolumeClaimTemplate` merged into each volumeClaimTemplate `$mergedValues.volumeClaimTemplates[x]`
+![Values merging process](values-merge.excalidraw.png)
+{{ template "chart.valuesSection" . }}
