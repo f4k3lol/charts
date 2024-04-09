@@ -22,4 +22,4 @@
 *.tmproj
 .vscode/
 # custom resources
-test*.yaml
+.helmdocsignore
