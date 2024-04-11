@@ -23,3 +23,5 @@
 .vscode/
 # custom resources
 .helmdocsignore
+README.md.gotmpl
+values-merge.excalidraw.png
