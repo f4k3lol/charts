@@ -189,7 +189,7 @@ spec:
           {{- if $env_spec }}
             {{- if not (quote $env_spec.value | empty)}}
         - name: {{ $env_name }}
-          value: {{ include "tpl.render" (list $ . $env_spec.value) | quote }}
+          value: {{ include "tpl.render" (list $ . ($env_spec.value | quote)) }}
             {{- end }}
           {{- end }}
         {{- end }}
