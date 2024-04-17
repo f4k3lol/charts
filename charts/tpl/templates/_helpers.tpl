@@ -59,7 +59,7 @@ Check if volumes or configs exists in containers
   {{- $mergedValues := mustMergeOverwrite (dict) .Values.global .Values }}
   {{- $result := false }}
   {{- range $container_name, $container_spec := $mergedValues.containers }}
-    {{- if coalesce (and (hasKey $container_spec "volumes") (eq $.Values.kind "Deployment")) (hasKey $container_spec "configs") }}
+    {{- if coalesce (hasKey $container_spec "volumes") (eq $.Values.kind "Deployment") (hasKey $container_spec "configs") }}
       {{- $result = true }}
     {{- end }}
   {{- end }}
