@@ -44,7 +44,7 @@ spec:
     metadata:
       annotations:
   {{- with $mergedValues.podAnnotations }}
-    {{- toYaml . | nindent 8 }}
+    {{- include "tpl.render" (list $ . (toYaml .)) | nindent 8 }}
   {{- end }}
       labels:
   {{- include "tpl.selectorLabels" . | nindent 8 }}
