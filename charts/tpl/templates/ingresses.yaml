@@ -21,7 +21,7 @@ spec:
   - secretName: {{ include "tpl.render" (list $ . $tls_spec.secretName) }}
     hosts:
         {{- range $host := $tls_spec.hosts }}
-      - {{ include "tpl.render" (list $ . $host) }}
+      - {{ include "tpl.render" (list $ . (quote $host)) }}
         {{- end }}
       {{- end }}
     {{- end }}
