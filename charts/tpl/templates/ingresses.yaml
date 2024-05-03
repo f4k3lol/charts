@@ -28,7 +28,7 @@ spec:
   rules:
     {{- if $merged_ingress_spec.hosts }}
       {{- range $host := $merged_ingress_spec.hosts }}
-    - host: {{ include "tpl.render" (list $ . $host) }}
+    - host: {{ include "tpl.render" (list $ . (quote $host)) }}
       http:
         paths:
         {{- range $path := $merged_ingress_spec.paths }}
