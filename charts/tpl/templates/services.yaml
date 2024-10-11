@@ -34,7 +34,7 @@ spec:
     {{- end }}
     port: {{ $port_spec.port }}
     targetPort: {{ $port_spec.targetPort | default $port_spec.port }}
-    {{- if $port_spec.NodePort }}
+    {{- if $port_spec.nodePort }}
     nodePort: {{ $port_spec.nodePort | default $port_spec.port }}
     {{- end }}
   {{- end }}
