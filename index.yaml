@@ -2,6 +2,18 @@ apiVersion: v1
 entries:
   tpl:
   - apiVersion: v2
+    appVersion: 0.12.1
+    created: "2024-10-15T06:13:58.371020393Z"
+    description: Chart for templating kubernetes resources using values. Can be used
+      as single dependency, as multiple dependencies, as is. See examples for use
+      cases
+    digest: 479d8c5414f4c86c85ccfe08598fc24e0a65c20ac466197a727f18ce8e1a99e3
+    name: tpl
+    type: application
+    urls:
+    - https://github.com/f4k3lol/charts/releases/download/tpl-0.12.1/tpl-0.12.1.tgz
+    version: 0.12.1
+  - apiVersion: v2
     appVersion: 0.1.0
     created: "2024-04-05T11:02:49.789038159Z"
     description: Template chart
@@ -11,4 +23,4 @@ entries:
     urls:
     - https://github.com/f4k3lol/charts/releases/download/tpl-0.12.0/tpl-0.12.0.tgz
     version: 0.12.0
-generated: "2024-04-05T11:02:49.789048117Z"
+generated: "2024-10-15T06:13:58.371031393Z"
