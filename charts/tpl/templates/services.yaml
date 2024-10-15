@@ -23,6 +23,9 @@ spec:
   {{- with $merged_svc_spec.loadBalancerIP }}
   loadBalancerIP: {{ . }}
   {{- end }}
+  {{- with $merged_svc_spec.publishNotReadyAddresses }}
+  publishNotReadyAddresses : {{ . }}
+  {{- end }}
   {{- with $merged_svc_spec.externalName }}
   externalName: {{ . }}
   {{- end }}
