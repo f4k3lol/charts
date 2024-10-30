@@ -1,4 +1,5 @@
-{{- if and (eq .Values.kind "Deployment") .Values.autoscaling.enabled }}
+{{- $mergedValues := mustMergeOverwrite (dict) .Values.global .Values }}
+{{- if and (eq $mergedValues.kind "Deployment") $mergedValues.autoscaling.enabled }}
 ---
   {{- if .Capabilities.APIVersions.Has "autoscaling/v2" }}
 apiVersion: autoscaling/v2
@@ -15,14 +16,15 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: {{ include "tpl.fullname" . }}
-  minReplicas: {{ .Values.autoscaling.minReplicas }}
-  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
-  {{- with .Values.autoscaling.behavior }}
+  minReplicas: {{ $mergedValues.autoscaling.minReplicas }}
+  maxReplicas: {{ $mergedValues.autoscaling.maxReplicas }}
+  {{- with $mergedValues.autoscaling.behavior }}
   behavior:
     {{- toYaml . | nindent 4 }}
   {{- end }}
-  {{- with .Values.autoscaling.metrics }}
+  {{- with $mergedValues.autoscaling.metrics }}
   metrics:
     {{- toYaml . | nindent 4 }}
   {{- end }}
+{{- end }}
 {{- end }}
