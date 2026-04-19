@@ -1,0 +1,90 @@
+suite: configmap
+templates:
+  - configmap.yaml
+
+tests:
+  - it: "renders a ConfigMap"
+    set:
+      configMaps:
+        app-config:
+          data:
+            key: value
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: data.key
+          value: value
+
+  - it: "renders nothing when configMaps is empty"
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "renders multiple ConfigMaps"
+    set:
+      configMaps:
+        config-a:
+          data:
+            a: "1"
+        config-b:
+          data:
+            b: "2"
+    asserts:
+      - hasDocuments:
+          count: 2
+
+  - it: "sets labels and annotations"
+    set:
+      configMaps:
+        app-config:
+          labels:
+            custom: label
+          annotations:
+            description: "my config"
+          data:
+            key: value
+    asserts:
+      - equal:
+          path: metadata.labels.custom
+          value: label
+      - equal:
+          path: metadata.annotations.description
+          value: "my config"
+
+  - it: "renders binaryData"
+    set:
+      configMaps:
+        binary:
+          binaryData:
+            logo.png: "iVBORw0KGgo..."
+    asserts:
+      - equal:
+          path: binaryData["logo.png"]
+          value: "iVBORw0KGgo..."
+
+  - it: "renders multiline data"
+    set:
+      configMaps:
+        app-config:
+          data:
+            config.yaml: |
+              server:
+                port: 8080
+    asserts:
+      - matchRegex:
+          path: data["config.yaml"]
+          pattern: "server:"
+
+  - it: "commonLabels appear on ConfigMap"
+    set:
+      commonLabels:
+        team: backend
+      configMaps:
+        app-config:
+          data:
+            key: value
+    asserts:
+      - equal:
+          path: metadata.labels.team
+          value: backend

@@ -1,0 +1,187 @@
+suite: daemonset
+templates:
+  - daemonset.yaml
+
+tests:
+  # ---------------------------------------------------------------------------
+  # Basic rendering
+  # ---------------------------------------------------------------------------
+  - it: "renders a DaemonSet"
+    set:
+      daemonSets:
+        logs:
+          containers:
+            fluentbit:
+              image:
+                repository: fluent/fluent-bit
+                tag: "3.1"
+    asserts:
+      - isKind:
+          of: DaemonSet
+      - hasDocuments:
+          count: 1
+
+  - it: "renders nothing when daemonSets is empty"
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "enabled: false skips rendering"
+    set:
+      daemonSets:
+        logs:
+          enabled: false
+          containers:
+            fluentbit:
+              image:
+                repository: fluent/fluent-bit
+                tag: "3.1"
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  # ---------------------------------------------------------------------------
+  # DaemonSet-specific fields
+  # ---------------------------------------------------------------------------
+  - it: "sets updateStrategy"
+    set:
+      daemonSets:
+        logs:
+          updateStrategy:
+            type: RollingUpdate
+            rollingUpdate:
+              maxUnavailable: 1
+          containers:
+            fluentbit:
+              image:
+                repository: fluent/fluent-bit
+                tag: "3.1"
+    asserts:
+      - equal:
+          path: spec.updateStrategy.type
+          value: RollingUpdate
+      - equal:
+          path: spec.updateStrategy.rollingUpdate.maxUnavailable
+          value: 1
+
+  - it: "does not render replicas (DaemonSet has no replicas field)"
+    set:
+      daemonSets:
+        logs:
+          containers:
+            fluentbit:
+              image:
+                repository: fluent/fluent-bit
+                tag: "3.1"
+    asserts:
+      - notExists:
+          path: spec.replicas
+
+  # ---------------------------------------------------------------------------
+  # Pod-level fields specific to DaemonSets
+  # ---------------------------------------------------------------------------
+  - it: "sets hostNetwork"
+    set:
+      daemonSets:
+        exporter:
+          hostNetwork: true
+          containers:
+            exporter:
+              image:
+                repository: prom/node-exporter
+                tag: "1.8"
+    asserts:
+      - equal:
+          path: spec.template.spec.hostNetwork
+          value: true
+
+  - it: "sets hostPID"
+    set:
+      daemonSets:
+        exporter:
+          hostPID: true
+          containers:
+            exporter:
+              image:
+                repository: prom/node-exporter
+                tag: "1.8"
+    asserts:
+      - equal:
+          path: spec.template.spec.hostPID
+          value: true
+
+  - it: "sets tolerations for all nodes"
+    set:
+      daemonSets:
+        logs:
+          tolerations:
+            - operator: Exists
+          containers:
+            fluentbit:
+              image:
+                repository: fluent/fluent-bit
+                tag: "3.1"
+    asserts:
+      - equal:
+          path: spec.template.spec.tolerations[0].operator
+          value: Exists
+
+  - it: "sets hostPath volumes"
+    set:
+      daemonSets:
+        logs:
+          volumes:
+            - name: varlog
+              hostPath:
+                path: /var/log
+          containers:
+            fluentbit:
+              image:
+                repository: fluent/fluent-bit
+                tag: "3.1"
+              volumeMounts:
+                - name: varlog
+                  mountPath: /var/log
+                  readOnly: true
+    asserts:
+      - equal:
+          path: spec.template.spec.volumes[0].hostPath.path
+          value: /var/log
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].readOnly
+          value: true
+
+  # ---------------------------------------------------------------------------
+  # Default merging
+  # ---------------------------------------------------------------------------
+  - it: "merges defaultPod into DaemonSet"
+    set:
+      defaultPod:
+        terminationGracePeriodSeconds: 30
+      daemonSets:
+        logs:
+          containers:
+            fluentbit:
+              image:
+                repository: fluent/fluent-bit
+                tag: "3.1"
+    asserts:
+      - equal:
+          path: spec.template.spec.terminationGracePeriodSeconds
+          value: 30
+
+  - it: "merges defaultContainer into DaemonSet containers"
+    set:
+      defaultContainer:
+        imagePullPolicy: Always
+      daemonSets:
+        logs:
+          containers:
+            fluentbit:
+              image:
+                repository: fluent/fluent-bit
+                tag: "3.1"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].imagePullPolicy
+          value: Always

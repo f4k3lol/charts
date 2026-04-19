@@ -1,0 +1,699 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "tpl chart values",
+  "description": "Generic Helm chart for templating Kubernetes resources from values.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "nameOverride": {
+      "type": "string",
+      "description": "Override chart name in selector labels. Important in multi-dependency mode."
+    },
+    "fullnameOverride": {
+      "type": "string",
+      "description": "Override full resource name (default: release-chart)."
+    },
+    "commonLabels": {
+      "type": "object",
+      "description": "Labels applied to every rendered resource.",
+      "additionalProperties": { "type": "string" }
+    },
+    "commonAnnotations": {
+      "type": "object",
+      "description": "Annotations applied to every rendered resource.",
+      "additionalProperties": { "type": "string" }
+    },
+    "global": {
+      "type": "object",
+      "description": "Helm-native key passed to subcharts. Lowest override priority."
+    },
+    "defaultPod": { "$ref": "#/$defs/podSpec", "description": "Merged into every workload's pod spec." },
+    "defaultContainer": { "$ref": "#/$defs/containerSpec", "description": "Merged into every container." },
+    "defaultService": { "$ref": "#/$defs/serviceSpec", "description": "Merged into every service." },
+    "defaultIngress": { "$ref": "#/$defs/ingressSpec", "description": "Merged into every ingress." },
+    "defaultHttpRoute": { "$ref": "#/$defs/httpRouteSpec", "description": "Merged into every HTTPRoute." },
+    "defaultGrpcRoute": { "$ref": "#/$defs/routeSpec", "description": "Merged into every GRPCRoute." },
+    "defaultTcpRoute": { "$ref": "#/$defs/routeSpec", "description": "Merged into every TCPRoute." },
+    "defaultTlsRoute": { "$ref": "#/$defs/routeSpec", "description": "Merged into every TLSRoute." },
+    "defaultVolumeClaimTemplate": {
+      "type": "object",
+      "description": "Merged into each volumeClaimTemplate (StatefulSet).",
+      "properties": {
+        "spec": { "type": "object" }
+      }
+    },
+    "deployments": {
+      "type": "object",
+      "description": "Map of deployment name -> spec.",
+      "additionalProperties": { "$ref": "#/$defs/deploymentSpec" }
+    },
+    "statefulSets": {
+      "type": "object",
+      "description": "Map of statefulset name -> spec.",
+      "additionalProperties": { "$ref": "#/$defs/statefulSetSpec" }
+    },
+    "daemonSets": {
+      "type": "object",
+      "description": "Map of daemonset name -> spec.",
+      "additionalProperties": { "$ref": "#/$defs/daemonSetSpec" }
+    },
+    "jobs": {
+      "type": "object",
+      "description": "Map of job name -> spec.",
+      "additionalProperties": { "$ref": "#/$defs/jobSpec" }
+    },
+    "cronJobs": {
+      "type": "object",
+      "description": "Map of cronjob name -> spec.",
+      "additionalProperties": { "$ref": "#/$defs/cronJobSpec" }
+    },
+    "services": {
+      "type": "object",
+      "description": "Map of service name -> spec.",
+      "additionalProperties": { "$ref": "#/$defs/serviceSpec" }
+    },
+    "ingresses": {
+      "type": "object",
+      "description": "Map of ingress name -> spec (top-level, requires serviceName).",
+      "additionalProperties": { "$ref": "#/$defs/ingressSpec" }
+    },
+    "httpRoutes": {
+      "type": "object",
+      "description": "Map of HTTPRoute name -> spec (Gateway API).",
+      "additionalProperties": { "$ref": "#/$defs/httpRouteSpec" }
+    },
+    "grpcRoutes": {
+      "type": "object",
+      "description": "Map of GRPCRoute name -> spec (Gateway API).",
+      "additionalProperties": { "$ref": "#/$defs/routeSpec" }
+    },
+    "tcpRoutes": {
+      "type": "object",
+      "description": "Map of TCPRoute name -> spec (Gateway API).",
+      "additionalProperties": { "$ref": "#/$defs/routeSpec" }
+    },
+    "tlsRoutes": {
+      "type": "object",
+      "description": "Map of TLSRoute name -> spec (Gateway API).",
+      "additionalProperties": { "$ref": "#/$defs/routeSpec" }
+    },
+    "gateways": {
+      "type": "object",
+      "description": "Map of Gateway name -> spec (Gateway API).",
+      "additionalProperties": { "$ref": "#/$defs/gatewaySpec" }
+    },
+    "networkPolicies": {
+      "type": "object",
+      "description": "Map of NetworkPolicy name -> spec.",
+      "additionalProperties": { "$ref": "#/$defs/networkPolicySpec" }
+    },
+    "configMaps": {
+      "type": "object",
+      "description": "Map of ConfigMap name -> spec.",
+      "additionalProperties": { "$ref": "#/$defs/configMapSpec" }
+    },
+    "secrets": {
+      "type": "object",
+      "description": "Map of Secret name -> spec.",
+      "additionalProperties": { "$ref": "#/$defs/secretSpec" }
+    },
+    "persistentVolumeClaims": {
+      "type": "object",
+      "description": "Map of PVC name -> spec.",
+      "additionalProperties": { "$ref": "#/$defs/pvcSpec" }
+    },
+    "serviceAccounts": {
+      "type": "object",
+      "description": "Map of ServiceAccount name -> spec.",
+      "additionalProperties": { "$ref": "#/$defs/serviceAccountSpec" }
+    },
+    "podDisruptionBudgets": {
+      "type": "object",
+      "description": "Map of PDB name -> spec.",
+      "additionalProperties": { "$ref": "#/$defs/pdbSpec" }
+    },
+    "serviceMonitors": {
+      "type": "object",
+      "description": "Map of ServiceMonitor name -> spec (Prometheus Operator).",
+      "additionalProperties": { "$ref": "#/$defs/serviceMonitorSpec" }
+    },
+    "podMonitors": {
+      "type": "object",
+      "description": "Map of PodMonitor name -> spec (Prometheus Operator).",
+      "additionalProperties": { "$ref": "#/$defs/podMonitorSpec" }
+    },
+    "extraManifests": {
+      "type": "array",
+      "description": "Raw Kubernetes manifests rendered as-is. Native YAML objects.",
+      "items": { "type": "object" }
+    }
+  },
+
+  "$defs": {
+    "imageSpec": {
+      "type": "object",
+      "properties": {
+        "registry": { "type": "string", "description": "Image registry (e.g. docker.io, ghcr.io)." },
+        "repository": { "type": "string", "description": "Image repository (e.g. nginx, myorg/myapp)." },
+        "tag": { "type": "string", "description": "Image tag." },
+        "digest": { "type": "string", "description": "Image digest (takes precedence over tag)." }
+      }
+    },
+
+    "envSpec": {
+      "type": "object",
+      "description": "Environment variable. One of: value, configMap ref, or secret ref.",
+      "properties": {
+        "value": { "type": "string" },
+        "from": { "type": "string", "enum": ["configMap", "secret"] },
+        "name": { "type": "string", "description": "ConfigMap or Secret name." },
+        "key": { "type": "string", "description": "Key within the ConfigMap or Secret." }
+      }
+    },
+
+    "configMountSpec": {
+      "type": "object",
+      "description": "Mount a ConfigMap or Secret key as a file.",
+      "properties": {
+        "mountPath": { "type": "string" },
+        "from": { "type": "string", "enum": ["configMap", "secret"] },
+        "name": { "type": "string" },
+        "key": { "type": "string", "description": "Specific key to mount. Omit to mount all keys as directory." },
+        "defaultMode": { "type": "integer" }
+      },
+      "required": ["mountPath", "from", "name"]
+    },
+
+    "probeSpec": {
+      "type": "object",
+      "properties": {
+        "httpGet": { "type": "object", "properties": {
+          "path": { "type": "string" },
+          "port": {},
+          "scheme": { "type": "string" }
+        }},
+        "exec": { "type": "object", "properties": {
+          "command": { "type": "array", "items": { "type": "string" } }
+        }},
+        "tcpSocket": { "type": "object", "properties": {
+          "port": {} }
+        },
+        "initialDelaySeconds": { "type": "integer" },
+        "periodSeconds": { "type": "integer" },
+        "timeoutSeconds": { "type": "integer" },
+        "failureThreshold": { "type": "integer" },
+        "successThreshold": { "type": "integer" }
+      }
+    },
+
+    "containerSpec": {
+      "type": "object",
+      "properties": {
+        "image": { "$ref": "#/$defs/imageSpec" },
+        "imageString": { "type": "string", "description": "Plain image string, bypasses registry/repository/tag." },
+        "imagePullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] },
+        "workingDir": { "type": "string" },
+        "command": { "type": "array", "items": { "type": "string" } },
+        "args": { "type": "array", "items": { "type": "string" } },
+        "ports": { "type": "array", "items": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "containerPort": { "type": "integer" },
+            "protocol": { "type": "string", "enum": ["TCP", "UDP", "SCTP"] }
+          },
+          "required": ["containerPort"]
+        }},
+        "env": {
+          "type": "object",
+          "description": "Map of env var name -> spec.",
+          "additionalProperties": { "$ref": "#/$defs/envSpec" }
+        },
+        "envFrom": { "type": "array", "items": { "type": "object" } },
+        "resources": {
+          "type": "object",
+          "properties": {
+            "requests": { "type": "object" },
+            "limits": { "type": "object" }
+          }
+        },
+        "securityContext": { "type": "object" },
+        "livenessProbe": { "$ref": "#/$defs/probeSpec" },
+        "readinessProbe": { "$ref": "#/$defs/probeSpec" },
+        "startupProbe": { "$ref": "#/$defs/probeSpec" },
+        "lifecycle": { "type": "object" },
+        "volumeMounts": { "type": "array", "items": { "type": "object" } },
+        "configs": {
+          "type": "object",
+          "description": "Map of config mount name -> spec.",
+          "additionalProperties": { "$ref": "#/$defs/configMountSpec" }
+        }
+      }
+    },
+
+    "podSpec": {
+      "type": "object",
+      "description": "Pod-level settings.",
+      "properties": {
+        "podLabels": { "type": "object", "additionalProperties": { "type": "string" } },
+        "podAnnotations": { "type": "object", "additionalProperties": { "type": "string" } },
+        "podSecurityContext": { "type": "object" },
+        "serviceAccountName": { "type": "string" },
+        "imagePullSecrets": { "type": "array", "items": { "type": "object", "properties": { "name": { "type": "string" } } } },
+        "enableServiceLinks": { "type": "boolean" },
+        "nodeSelector": { "type": "object", "additionalProperties": { "type": "string" } },
+        "tolerations": { "type": "array", "items": { "type": "object" } },
+        "affinity": { "type": "object" },
+        "topologySpreadConstraints": { "type": "array", "items": { "type": "object" } },
+        "terminationGracePeriodSeconds": { "type": "integer" },
+        "restartPolicy": { "type": "string", "enum": ["Always", "OnFailure", "Never"] },
+        "dnsPolicy": { "type": "string" },
+        "dnsConfig": { "type": "object" },
+        "hostNetwork": { "type": "boolean" },
+        "hostPID": { "type": "boolean" },
+        "volumes": { "type": "array", "items": { "type": "object" } }
+      }
+    },
+
+    "autoscalingSpec": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "minReplicas": { "type": "integer" },
+        "maxReplicas": { "type": "integer" },
+        "metrics": { "type": "array", "items": { "type": "object" } },
+        "behavior": { "type": "object" }
+      }
+    },
+
+    "deploymentSpec": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean", "description": "Set false to skip rendering." },
+        "replicas": { "type": "integer" },
+        "strategy": { "type": "object" },
+        "autoscaling": { "$ref": "#/$defs/autoscalingSpec" },
+        "checksumAnnotations": {
+          "type": "array",
+          "description": "Auto-restart on config change. List of 'configMaps/name' or 'secrets/name'.",
+          "items": { "type": "string" }
+        },
+        "containers": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/containerSpec" }
+        },
+        "initContainers": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/containerSpec" }
+        },
+        "labels": { "type": "object", "additionalProperties": { "type": "string" } },
+        "annotations": { "type": "object", "additionalProperties": { "type": "string" } },
+        "podLabels": { "type": "object", "additionalProperties": { "type": "string" } },
+        "podAnnotations": { "type": "object", "additionalProperties": { "type": "string" } },
+        "podSecurityContext": { "type": "object" },
+        "serviceAccountName": { "type": "string" },
+        "imagePullSecrets": { "type": "array", "items": { "type": "object" } },
+        "enableServiceLinks": { "type": "boolean" },
+        "nodeSelector": { "type": "object", "additionalProperties": { "type": "string" } },
+        "tolerations": { "type": "array", "items": { "type": "object" } },
+        "affinity": { "type": "object" },
+        "topologySpreadConstraints": { "type": "array", "items": { "type": "object" } },
+        "terminationGracePeriodSeconds": { "type": "integer" },
+        "dnsPolicy": { "type": "string" },
+        "dnsConfig": { "type": "object" },
+        "hostNetwork": { "type": "boolean" },
+        "hostPID": { "type": "boolean" },
+        "volumes": { "type": "array", "items": { "type": "object" } }
+      },
+      "required": ["containers"]
+    },
+
+    "statefulSetSpec": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "replicas": { "type": "integer" },
+        "serviceName": { "type": "string" },
+        "podManagementPolicy": { "type": "string", "enum": ["OrderedReady", "Parallel"] },
+        "minReadySeconds": { "type": "integer" },
+        "updateStrategy": { "type": "object" },
+        "persistentVolumeClaimRetentionPolicy": { "type": "object" },
+        "volumeClaimTemplates": { "type": "array", "items": { "type": "object" } },
+        "containers": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/containerSpec" }
+        },
+        "initContainers": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/containerSpec" }
+        },
+        "labels": { "type": "object" },
+        "annotations": { "type": "object" },
+        "podLabels": { "type": "object" },
+        "podAnnotations": { "type": "object" },
+        "podSecurityContext": { "type": "object" },
+        "serviceAccountName": { "type": "string" },
+        "imagePullSecrets": { "type": "array" },
+        "enableServiceLinks": { "type": "boolean" },
+        "nodeSelector": { "type": "object" },
+        "tolerations": { "type": "array" },
+        "affinity": { "type": "object" },
+        "topologySpreadConstraints": { "type": "array" },
+        "terminationGracePeriodSeconds": { "type": "integer" },
+        "dnsPolicy": { "type": "string" },
+        "dnsConfig": { "type": "object" },
+        "hostNetwork": { "type": "boolean" },
+        "hostPID": { "type": "boolean" },
+        "volumes": { "type": "array" },
+        "checksumAnnotations": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["containers"]
+    },
+
+    "daemonSetSpec": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "updateStrategy": { "type": "object" },
+        "containers": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/containerSpec" }
+        },
+        "initContainers": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/containerSpec" }
+        },
+        "labels": { "type": "object" },
+        "annotations": { "type": "object" },
+        "podLabels": { "type": "object" },
+        "podAnnotations": { "type": "object" },
+        "podSecurityContext": { "type": "object" },
+        "serviceAccountName": { "type": "string" },
+        "imagePullSecrets": { "type": "array" },
+        "enableServiceLinks": { "type": "boolean" },
+        "nodeSelector": { "type": "object" },
+        "tolerations": { "type": "array" },
+        "affinity": { "type": "object" },
+        "topologySpreadConstraints": { "type": "array" },
+        "terminationGracePeriodSeconds": { "type": "integer" },
+        "dnsPolicy": { "type": "string" },
+        "dnsConfig": { "type": "object" },
+        "hostNetwork": { "type": "boolean" },
+        "hostPID": { "type": "boolean" },
+        "volumes": { "type": "array" },
+        "checksumAnnotations": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["containers"]
+    },
+
+    "jobSpec": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "backoffLimit": { "type": "integer" },
+        "activeDeadlineSeconds": { "type": "integer" },
+        "ttlSecondsAfterFinished": { "type": "integer" },
+        "completions": { "type": "integer" },
+        "parallelism": { "type": "integer" },
+        "restartPolicy": { "type": "string", "enum": ["OnFailure", "Never"] },
+        "containers": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/containerSpec" }
+        },
+        "initContainers": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/containerSpec" }
+        },
+        "labels": { "type": "object" },
+        "annotations": { "type": "object" },
+        "podLabels": { "type": "object" },
+        "podAnnotations": { "type": "object" },
+        "podSecurityContext": { "type": "object" },
+        "serviceAccountName": { "type": "string" },
+        "imagePullSecrets": { "type": "array" },
+        "enableServiceLinks": { "type": "boolean" },
+        "nodeSelector": { "type": "object" },
+        "tolerations": { "type": "array" },
+        "affinity": { "type": "object" },
+        "terminationGracePeriodSeconds": { "type": "integer" },
+        "dnsPolicy": { "type": "string" },
+        "volumes": { "type": "array" }
+      },
+      "required": ["containers"]
+    },
+
+    "cronJobSpec": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "schedule": { "type": "string", "description": "Cron schedule expression." },
+        "concurrencyPolicy": { "type": "string", "enum": ["Allow", "Forbid", "Replace"] },
+        "successfulJobsHistoryLimit": { "type": "integer" },
+        "failedJobsHistoryLimit": { "type": "integer" },
+        "startingDeadlineSeconds": { "type": "integer" },
+        "suspend": { "type": "boolean" },
+        "timeZone": { "type": "string" },
+        "backoffLimit": { "type": "integer" },
+        "activeDeadlineSeconds": { "type": "integer" },
+        "ttlSecondsAfterFinished": { "type": "integer" },
+        "restartPolicy": { "type": "string", "enum": ["OnFailure", "Never"] },
+        "containers": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/containerSpec" }
+        },
+        "initContainers": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/containerSpec" }
+        },
+        "labels": { "type": "object" },
+        "annotations": { "type": "object" },
+        "podLabels": { "type": "object" },
+        "podAnnotations": { "type": "object" },
+        "podSecurityContext": { "type": "object" },
+        "serviceAccountName": { "type": "string" },
+        "imagePullSecrets": { "type": "array" },
+        "enableServiceLinks": { "type": "boolean" },
+        "nodeSelector": { "type": "object" },
+        "tolerations": { "type": "array" },
+        "affinity": { "type": "object" },
+        "terminationGracePeriodSeconds": { "type": "integer" },
+        "dnsPolicy": { "type": "string" },
+        "volumes": { "type": "array" }
+      },
+      "required": ["schedule", "containers"]
+    },
+
+    "serviceSpec": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "type": { "type": "string", "enum": ["ClusterIP", "NodePort", "LoadBalancer", "ExternalName"] },
+        "clusterIP": { "type": "string" },
+        "externalName": { "type": "string" },
+        "loadBalancerIP": { "type": "string" },
+        "publishNotReadyAddresses": { "type": "boolean" },
+        "sessionAffinity": { "type": "string" },
+        "sessionAffinityConfig": { "type": "object" },
+        "selector": { "type": "object", "description": "Custom selector. Overrides auto-generated selectorLabels." },
+        "annotations": { "type": "object", "additionalProperties": { "type": "string" } },
+        "labels": { "type": "object", "additionalProperties": { "type": "string" } },
+        "ports": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "port": { "type": "integer" },
+              "targetPort": {},
+              "nodePort": { "type": "integer" },
+              "protocol": { "type": "string" },
+              "appProtocol": { "type": "string" }
+            },
+            "required": ["port"]
+          }
+        },
+        "ingresses": {
+          "type": "object",
+          "description": "Nested ingresses. serviceName inherited from parent service.",
+          "additionalProperties": { "$ref": "#/$defs/ingressSpec" }
+        },
+        "httpRoutes": {
+          "type": "object",
+          "description": "Nested HTTPRoutes. backendRefs default to parent service.",
+          "additionalProperties": { "$ref": "#/$defs/httpRouteSpec" }
+        }
+      }
+    },
+
+    "ingressSpec": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "className": { "type": "string" },
+        "annotations": { "type": "object", "additionalProperties": { "type": "string" } },
+        "labels": { "type": "object", "additionalProperties": { "type": "string" } },
+        "tls": { "type": "array", "items": { "type": "object" } },
+        "hosts": { "type": "array", "items": { "type": "string" } },
+        "paths": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": { "type": "string" },
+              "type": { "type": "string" }
+            }
+          }
+        },
+        "defaultPathType": { "type": "string" },
+        "serviceName": { "type": "string", "description": "Required for top-level ingresses." },
+        "servicePortNumber": { "type": "integer" },
+        "servicePortName": { "type": "string" }
+      }
+    },
+
+    "httpRouteSpec": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "parentRefs": { "type": "array", "items": { "type": "object" } },
+        "hostnames": { "type": "array", "items": { "type": "string" } },
+        "rules": { "type": "array", "items": { "type": "object" } },
+        "labels": { "type": "object" },
+        "annotations": { "type": "object" }
+      }
+    },
+
+    "routeSpec": {
+      "type": "object",
+      "description": "Gateway API route (GRPCRoute, TCPRoute, TLSRoute).",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "parentRefs": { "type": "array", "items": { "type": "object" } },
+        "hostnames": { "type": "array", "items": { "type": "string" } },
+        "rules": { "type": "array", "items": { "type": "object" } },
+        "labels": { "type": "object" },
+        "annotations": { "type": "object" }
+      }
+    },
+
+    "gatewaySpec": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "gatewayClassName": { "type": "string" },
+        "listeners": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "protocol": { "type": "string" },
+              "port": { "type": "integer" },
+              "hostname": { "type": "string" },
+              "tls": { "type": "object" },
+              "allowedRoutes": { "type": "object" }
+            },
+            "required": ["name", "protocol", "port"]
+          }
+        },
+        "labels": { "type": "object" },
+        "annotations": { "type": "object" }
+      },
+      "required": ["gatewayClassName"]
+    },
+
+    "networkPolicySpec": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "podSelector": { "type": "object" },
+        "policyTypes": { "type": "array", "items": { "type": "string", "enum": ["Ingress", "Egress"] } },
+        "ingress": { "type": "array", "items": { "type": "object" } },
+        "egress": { "type": "array", "items": { "type": "object" } },
+        "labels": { "type": "object" },
+        "annotations": { "type": "object" }
+      }
+    },
+
+    "configMapSpec": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "data": { "type": "object", "additionalProperties": { "type": "string" } },
+        "binaryData": { "type": "object", "additionalProperties": { "type": "string" } },
+        "labels": { "type": "object", "additionalProperties": { "type": "string" } },
+        "annotations": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    },
+
+    "secretSpec": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "type": { "type": "string", "description": "Secret type (default: Opaque)." },
+        "data": { "type": "object", "additionalProperties": { "type": "string" } },
+        "stringData": { "type": "object", "additionalProperties": { "type": "string" } },
+        "labels": { "type": "object", "additionalProperties": { "type": "string" } },
+        "annotations": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    },
+
+    "pvcSpec": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "storageClassName": { "type": "string" },
+        "accessModes": { "type": "array", "items": { "type": "string" } },
+        "resources": { "type": "object" },
+        "labels": { "type": "object", "additionalProperties": { "type": "string" } },
+        "annotations": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    },
+
+    "serviceAccountSpec": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "annotations": { "type": "object", "additionalProperties": { "type": "string" } },
+        "labels": { "type": "object", "additionalProperties": { "type": "string" } },
+        "automountServiceAccountToken": { "type": "boolean" }
+      }
+    },
+
+    "pdbSpec": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "minAvailable": {},
+        "maxUnavailable": {},
+        "selector": { "type": "object" },
+        "labels": { "type": "object" },
+        "annotations": { "type": "object" }
+      }
+    },
+
+    "serviceMonitorSpec": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "labels": { "type": "object", "additionalProperties": { "type": "string" } },
+        "annotations": { "type": "object" },
+        "selector": { "type": "object" },
+        "namespaceSelector": { "type": "object" },
+        "endpoints": { "type": "array", "items": { "type": "object" } }
+      }
+    },
+
+    "podMonitorSpec": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "labels": { "type": "object", "additionalProperties": { "type": "string" } },
+        "annotations": { "type": "object" },
+        "selector": { "type": "object" },
+        "namespaceSelector": { "type": "object" },
+        "podMetricsEndpoints": { "type": "array", "items": { "type": "object" } }
+      }
+    }
+  }
+}

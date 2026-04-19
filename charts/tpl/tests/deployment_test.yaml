@@ -1,0 +1,776 @@
+suite: deployment
+templates:
+  - deployment.yaml
+
+tests:
+  # ---------------------------------------------------------------------------
+  # Basic rendering
+  # ---------------------------------------------------------------------------
+  - it: "renders a Deployment"
+    set:
+      deployments:
+        web:
+          replicas: 2
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: spec.replicas
+          value: 2
+
+  - it: "renders nothing when deployments is empty"
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "renders multiple deployments"
+    set:
+      deployments:
+        api:
+          containers:
+            api:
+              image:
+                repository: api
+                tag: "1.0"
+        worker:
+          containers:
+            worker:
+              image:
+                repository: worker
+                tag: "1.0"
+    asserts:
+      - hasDocuments:
+          count: 2
+
+  # ---------------------------------------------------------------------------
+  # enabled flag
+  # ---------------------------------------------------------------------------
+  - it: "enabled: false skips rendering"
+    set:
+      deployments:
+        web:
+          enabled: false
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "enabled: true renders normally"
+    set:
+      deployments:
+        web:
+          enabled: true
+          replicas: 1
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  - it: "renders when enabled is not set (default true)"
+    set:
+      deployments:
+        web:
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  # ---------------------------------------------------------------------------
+  # defaultPod merging
+  # ---------------------------------------------------------------------------
+  - it: "merges defaultPod into pod spec"
+    set:
+      defaultPod:
+        nodeSelector:
+          kubernetes.io/os: linux
+        terminationGracePeriodSeconds: 30
+      deployments:
+        web:
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+    asserts:
+      - equal:
+          path: spec.template.spec.nodeSelector["kubernetes.io/os"]
+          value: linux
+      - equal:
+          path: spec.template.spec.terminationGracePeriodSeconds
+          value: 30
+
+  - it: "workload-level overrides defaultPod"
+    set:
+      defaultPod:
+        terminationGracePeriodSeconds: 30
+        nodeSelector:
+          kubernetes.io/os: linux
+      deployments:
+        web:
+          terminationGracePeriodSeconds: 60
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+    asserts:
+      - equal:
+          path: spec.template.spec.terminationGracePeriodSeconds
+          value: 60
+      # nodeSelector still inherited
+      - equal:
+          path: spec.template.spec.nodeSelector["kubernetes.io/os"]
+          value: linux
+
+  # ---------------------------------------------------------------------------
+  # defaultContainer merging
+  # ---------------------------------------------------------------------------
+  - it: "merges defaultContainer into containers"
+    set:
+      defaultContainer:
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            memory: 256Mi
+      deployments:
+        web:
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].imagePullPolicy
+          value: Always
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: 100m
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: 256Mi
+
+  - it: "container-level overrides defaultContainer"
+    set:
+      defaultContainer:
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+      deployments:
+        web:
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+              resources:
+                requests:
+                  cpu: 500m
+                  memory: 512Mi
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: 500m
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: 512Mi
+
+  - it: "defaultContainer does not bleed between containers"
+    set:
+      defaultContainer:
+        resources:
+          requests:
+            cpu: 100m
+      deployments:
+        web:
+          containers:
+            app:
+              image:
+                repository: app
+                tag: "1.0"
+              resources:
+                requests:
+                  cpu: 500m
+            sidecar:
+              image:
+                repository: sidecar
+                tag: "1.0"
+              # should get defaultContainer's 100m, not app's 500m
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "sidecar")].resources.requests.cpu
+          value: 100m
+
+  # ---------------------------------------------------------------------------
+  # defaultPod does not bleed between deployments
+  # ---------------------------------------------------------------------------
+  - it: "defaultPod does not bleed between deployments"
+    set:
+      defaultPod:
+        nodeSelector:
+          kubernetes.io/os: linux
+      deployments:
+        api:
+          podAnnotations:
+            custom: api-only
+          containers:
+            api:
+              image:
+                repository: api
+                tag: "1.0"
+        worker:
+          containers:
+            worker:
+              image:
+                repository: worker
+                tag: "1.0"
+    documentIndex: 1
+    asserts:
+      # worker should NOT have api's podAnnotations
+      - notExists:
+          path: spec.template.metadata.annotations.custom
+
+  # ---------------------------------------------------------------------------
+  # Deployment-specific fields
+  # ---------------------------------------------------------------------------
+  - it: "sets strategy"
+    set:
+      deployments:
+        web:
+          strategy:
+            type: RollingUpdate
+            rollingUpdate:
+              maxSurge: 1
+              maxUnavailable: 0
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+    asserts:
+      - equal:
+          path: spec.strategy.type
+          value: RollingUpdate
+      - equal:
+          path: spec.strategy.rollingUpdate.maxSurge
+          value: 1
+
+  # ---------------------------------------------------------------------------
+  # Pod-level fields
+  # ---------------------------------------------------------------------------
+  - it: "sets serviceAccountName"
+    set:
+      deployments:
+        web:
+          serviceAccountName: my-sa
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+    asserts:
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: my-sa
+
+  - it: "sets imagePullSecrets"
+    set:
+      deployments:
+        web:
+          imagePullSecrets:
+            - name: my-secret
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+    asserts:
+      - equal:
+          path: spec.template.spec.imagePullSecrets[0].name
+          value: my-secret
+
+  - it: "sets podSecurityContext"
+    set:
+      deployments:
+        web:
+          podSecurityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.runAsNonRoot
+          value: true
+      - equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 1000
+
+  - it: "sets podLabels on pod template"
+    set:
+      deployments:
+        web:
+          podLabels:
+            custom: label
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels.custom
+          value: label
+
+  - it: "sets podAnnotations on pod template"
+    set:
+      deployments:
+        web:
+          podAnnotations:
+            prometheus.io/scrape: "true"
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations["prometheus.io/scrape"]
+          value: "true"
+
+  - it: "sets pod-level volumes"
+    set:
+      deployments:
+        web:
+          volumes:
+            - name: tmp
+              emptyDir: {}
+            - name: data
+              persistentVolumeClaim:
+                claimName: my-pvc
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+    asserts:
+      - equal:
+          path: spec.template.spec.volumes[0].name
+          value: tmp
+      - equal:
+          path: spec.template.spec.volumes[1].name
+          value: data
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].name
+          value: tmp
+
+  - it: "sets enableServiceLinks"
+    set:
+      deployments:
+        web:
+          enableServiceLinks: false
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+    asserts:
+      - equal:
+          path: spec.template.spec.enableServiceLinks
+          value: false
+
+  - it: "sets topology spread constraints"
+    set:
+      deployments:
+        web:
+          topologySpreadConstraints:
+            - maxSkew: 1
+              topologyKey: topology.kubernetes.io/zone
+              whenUnsatisfiable: DoNotSchedule
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+    asserts:
+      - equal:
+          path: spec.template.spec.topologySpreadConstraints[0].topologyKey
+          value: topology.kubernetes.io/zone
+
+  # ---------------------------------------------------------------------------
+  # initContainers
+  # ---------------------------------------------------------------------------
+  - it: "renders initContainers"
+    set:
+      deployments:
+        web:
+          initContainers:
+            init:
+              image:
+                repository: busybox
+                tag: "1.36"
+              command: ["sh", "-c", "echo init"]
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: init
+      - equal:
+          path: spec.template.spec.initContainers[0].image
+          value: "busybox:1.36"
+
+  - it: "merges defaultContainer into initContainers"
+    set:
+      defaultContainer:
+        imagePullPolicy: Always
+      deployments:
+        web:
+          initContainers:
+            init:
+              image:
+                repository: busybox
+                tag: "1.36"
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].imagePullPolicy
+          value: Always
+
+  # ---------------------------------------------------------------------------
+  # Container fields
+  # ---------------------------------------------------------------------------
+  - it: "sets container ports"
+    set:
+      deployments:
+        web:
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+              ports:
+                - name: http
+                  containerPort: 8080
+                  protocol: TCP
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports[0].name
+          value: http
+      - equal:
+          path: spec.template.spec.containers[0].ports[0].containerPort
+          value: 8080
+
+  - it: "sets container command and args"
+    set:
+      deployments:
+        web:
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+              command: ["/app/start"]
+              args: ["--port", "8080"]
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].command[0]
+          value: "/app/start"
+      - equal:
+          path: spec.template.spec.containers[0].args[0]
+          value: "--port"
+
+  - it: "sets container securityContext"
+    set:
+      deployments:
+        web:
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+              securityContext:
+                readOnlyRootFilesystem: true
+                allowPrivilegeEscalation: false
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+
+  - it: "sets probes"
+    set:
+      deployments:
+        web:
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+              livenessProbe:
+                httpGet:
+                  path: /healthz
+                  port: http
+                periodSeconds: 10
+              readinessProbe:
+                httpGet:
+                  path: /ready
+                  port: http
+              startupProbe:
+                httpGet:
+                  path: /healthz
+                  port: http
+                failureThreshold: 30
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.path
+          value: /healthz
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.path
+          value: /ready
+      - exists:
+          path: spec.template.spec.containers[0].startupProbe
+
+  - it: "sets exec probes"
+    set:
+      deployments:
+        web:
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+              livenessProbe:
+                exec:
+                  command: ["/bin/sh", "-c", "curl -f http://localhost/healthz"]
+                periodSeconds: 10
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.exec.command[0]
+          value: "/bin/sh"
+
+  - it: "sets lifecycle hooks"
+    set:
+      deployments:
+        web:
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+              lifecycle:
+                preStop:
+                  exec:
+                    command: ["/bin/sh", "-c", "sleep 5"]
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].lifecycle.preStop.exec.command[2]
+          value: "sleep 5"
+
+  - it: "sets workingDir"
+    set:
+      deployments:
+        web:
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+              workingDir: /app
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].workingDir
+          value: /app
+
+  # ---------------------------------------------------------------------------
+  # env — plain value, configMap ref, secret ref
+  # ---------------------------------------------------------------------------
+  - it: "renders plain env value"
+    set:
+      deployments:
+        web:
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+              env:
+                APP_NAME:
+                  value: my-app
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: APP_NAME
+            value: my-app
+
+  - it: "renders env from configMap"
+    set:
+      deployments:
+        web:
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+              env:
+                DB_HOST:
+                  from: configMap
+                  name: app-config
+                  key: db-host
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DB_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: app-config
+                key: db-host
+
+  - it: "renders env from secret"
+    set:
+      deployments:
+        web:
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+              env:
+                DB_PASSWORD:
+                  from: secret
+                  name: app-secrets
+                  key: db-password
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: app-secrets
+                key: db-password
+
+  - it: "renders envFrom"
+    set:
+      deployments:
+        web:
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+              envFrom:
+                - configMapRef:
+                    name: app-config
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].envFrom[0].configMapRef.name
+          value: app-config
+
+  # ---------------------------------------------------------------------------
+  # checksumAnnotations
+  # ---------------------------------------------------------------------------
+  - it: "adds checksum annotations for configMaps"
+    set:
+      configMaps:
+        app-config:
+          data:
+            key: value
+      deployments:
+        web:
+          checksumAnnotations:
+            - configMaps/app-config
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+    asserts:
+      - exists:
+          path: spec.template.metadata.annotations["checksum/configMaps-app-config"]
+
+  - it: "adds checksum annotations for secrets"
+    set:
+      secrets:
+        app-secrets:
+          stringData:
+            key: value
+      deployments:
+        web:
+          checksumAnnotations:
+            - secrets/app-secrets
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+    asserts:
+      - exists:
+          path: spec.template.metadata.annotations["checksum/secrets-app-secrets"]
+
+  # ---------------------------------------------------------------------------
+  # configs (file mounts from configMap/secret)
+  # ---------------------------------------------------------------------------
+  - it: "renders config mounts from configMap"
+    set:
+      deployments:
+        web:
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+              configs:
+                my-config:
+                  mountPath: /etc/app/config.yaml
+                  from: configMap
+                  name: app-config
+                  key: config.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: config-my-config
+            mountPath: /etc/app/config.yaml
+            readOnly: true
+          any: true
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: config-my-config
+          any: true

@@ -1,0 +1,240 @@
+suite: statefulset
+templates:
+  - statefulset.yaml
+
+tests:
+  # ---------------------------------------------------------------------------
+  # Basic rendering
+  # ---------------------------------------------------------------------------
+  - it: "renders a StatefulSet"
+    set:
+      statefulSets:
+        redis:
+          replicas: 3
+          serviceName: redis-headless
+          containers:
+            redis:
+              image:
+                repository: redis
+                tag: "7.2"
+    asserts:
+      - isKind:
+          of: StatefulSet
+      - equal:
+          path: spec.replicas
+          value: 3
+      - equal:
+          path: spec.serviceName
+          value: redis-headless
+
+  - it: "renders nothing when statefulSets is empty"
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "enabled: false skips rendering"
+    set:
+      statefulSets:
+        redis:
+          enabled: false
+          serviceName: redis-headless
+          containers:
+            redis:
+              image:
+                repository: redis
+                tag: "7.2"
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  # ---------------------------------------------------------------------------
+  # StatefulSet-specific fields
+  # ---------------------------------------------------------------------------
+  - it: "sets podManagementPolicy"
+    set:
+      statefulSets:
+        redis:
+          serviceName: redis-headless
+          podManagementPolicy: Parallel
+          containers:
+            redis:
+              image:
+                repository: redis
+                tag: "7.2"
+    asserts:
+      - equal:
+          path: spec.podManagementPolicy
+          value: Parallel
+
+  - it: "sets updateStrategy"
+    set:
+      statefulSets:
+        redis:
+          serviceName: redis-headless
+          updateStrategy:
+            type: RollingUpdate
+            rollingUpdate:
+              partition: 1
+          containers:
+            redis:
+              image:
+                repository: redis
+                tag: "7.2"
+    asserts:
+      - equal:
+          path: spec.updateStrategy.type
+          value: RollingUpdate
+      - equal:
+          path: spec.updateStrategy.rollingUpdate.partition
+          value: 1
+
+  - it: "sets minReadySeconds"
+    set:
+      statefulSets:
+        redis:
+          serviceName: redis-headless
+          minReadySeconds: 10
+          containers:
+            redis:
+              image:
+                repository: redis
+                tag: "7.2"
+    asserts:
+      - equal:
+          path: spec.minReadySeconds
+          value: 10
+
+  - it: "sets persistentVolumeClaimRetentionPolicy"
+    set:
+      statefulSets:
+        redis:
+          serviceName: redis-headless
+          persistentVolumeClaimRetentionPolicy:
+            whenDeleted: Retain
+            whenScaled: Delete
+          containers:
+            redis:
+              image:
+                repository: redis
+                tag: "7.2"
+    asserts:
+      - equal:
+          path: spec.persistentVolumeClaimRetentionPolicy.whenDeleted
+          value: Retain
+      - equal:
+          path: spec.persistentVolumeClaimRetentionPolicy.whenScaled
+          value: Delete
+
+  # ---------------------------------------------------------------------------
+  # Volume claim templates
+  # ---------------------------------------------------------------------------
+  - it: "renders volumeClaimTemplates"
+    set:
+      statefulSets:
+        redis:
+          serviceName: redis-headless
+          volumeClaimTemplates:
+            - metadata:
+                name: data
+              spec:
+                storageClassName: fast-ssd
+                resources:
+                  requests:
+                    storage: 10Gi
+          containers:
+            redis:
+              image:
+                repository: redis
+                tag: "7.2"
+    asserts:
+      - equal:
+          path: spec.volumeClaimTemplates[0].metadata.name
+          value: data
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.storageClassName
+          value: fast-ssd
+
+  - it: "merges defaultVolumeClaimTemplate into VCTs"
+    set:
+      defaultVolumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+      statefulSets:
+        redis:
+          serviceName: redis-headless
+          volumeClaimTemplates:
+            - metadata:
+                name: data
+              spec:
+                resources:
+                  requests:
+                    storage: 10Gi
+          containers:
+            redis:
+              image:
+                repository: redis
+                tag: "7.2"
+    asserts:
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.accessModes[0]
+          value: ReadWriteOnce
+
+  # ---------------------------------------------------------------------------
+  # defaultPod and defaultContainer merging
+  # ---------------------------------------------------------------------------
+  - it: "merges defaultPod into StatefulSet pod spec"
+    set:
+      defaultPod:
+        terminationGracePeriodSeconds: 30
+      statefulSets:
+        redis:
+          serviceName: redis-headless
+          containers:
+            redis:
+              image:
+                repository: redis
+                tag: "7.2"
+    asserts:
+      - equal:
+          path: spec.template.spec.terminationGracePeriodSeconds
+          value: 30
+
+  - it: "merges defaultContainer into StatefulSet containers"
+    set:
+      defaultContainer:
+        imagePullPolicy: Always
+      statefulSets:
+        redis:
+          serviceName: redis-headless
+          containers:
+            redis:
+              image:
+                repository: redis
+                tag: "7.2"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].imagePullPolicy
+          value: Always
+
+  # ---------------------------------------------------------------------------
+  # commonLabels / commonAnnotations
+  # ---------------------------------------------------------------------------
+  - it: "commonLabels appear on StatefulSet and pod template"
+    set:
+      commonLabels:
+        team: data
+      statefulSets:
+        redis:
+          serviceName: redis-headless
+          containers:
+            redis:
+              image:
+                repository: redis
+                tag: "7.2"
+    asserts:
+      - equal:
+          path: metadata.labels.team
+          value: data
+      - equal:
+          path: spec.template.metadata.labels.team
+          value: data

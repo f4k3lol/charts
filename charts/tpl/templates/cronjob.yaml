@@ -1,0 +1,42 @@
+{{- range $name, $spec := .Values.cronJobs }}
+{{- if not (and (hasKey $spec "enabled") (not $spec.enabled)) }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  {{- include "tpl.metadata" (dict "context" $ "name" $name "labels" $spec.labels "annotations" $spec.annotations) | nindent 2 }}
+spec:
+  schedule: {{ $spec.schedule | quote }}
+  {{- with $spec.concurrencyPolicy }}
+  concurrencyPolicy: {{ . }}
+  {{- end }}
+  {{- with $spec.successfulJobsHistoryLimit }}
+  successfulJobsHistoryLimit: {{ . }}
+  {{- end }}
+  {{- with $spec.failedJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ . }}
+  {{- end }}
+  {{- with $spec.startingDeadlineSeconds }}
+  startingDeadlineSeconds: {{ . }}
+  {{- end }}
+  {{- if kindIs "bool" $spec.suspend }}
+  suspend: {{ $spec.suspend }}
+  {{- end }}
+  {{- with $spec.timeZone }}
+  timeZone: {{ . | quote }}
+  {{- end }}
+  jobTemplate:
+    spec:
+      {{- with $spec.backoffLimit }}
+      backoffLimit: {{ . }}
+      {{- end }}
+      {{- with $spec.activeDeadlineSeconds }}
+      activeDeadlineSeconds: {{ . }}
+      {{- end }}
+      {{- with $spec.ttlSecondsAfterFinished }}
+      ttlSecondsAfterFinished: {{ . }}
+      {{- end }}
+      template:
+        {{- include "tpl.podSpec" (dict "workload" $spec "context" $) | nindent 8 }}
+{{- end }}
+{{- end }}

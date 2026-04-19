@@ -1,0 +1,145 @@
+suite: cluster resources
+templates:
+  - serviceaccount.yaml
+  - pdb.yaml
+  - networkpolicy.yaml
+
+tests:
+  # ---------------------------------------------------------------------------
+  # ServiceAccount
+  # ---------------------------------------------------------------------------
+  - it: "renders a ServiceAccount"
+    template: serviceaccount.yaml
+    set:
+      serviceAccounts:
+        my-sa:
+          annotations:
+            eks.amazonaws.com/role-arn: "arn:aws:iam::123:role/my-role"
+    asserts:
+      - isKind:
+          of: ServiceAccount
+      - equal:
+          path: metadata.annotations["eks.amazonaws.com/role-arn"]
+          value: "arn:aws:iam::123:role/my-role"
+
+  - it: "renders nothing when serviceAccounts is empty"
+    template: serviceaccount.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "sets automountServiceAccountToken"
+    template: serviceaccount.yaml
+    set:
+      serviceAccounts:
+        my-sa:
+          automountServiceAccountToken: false
+    asserts:
+      - equal:
+          path: automountServiceAccountToken
+          value: false
+
+  - it: "commonLabels appear on ServiceAccount"
+    template: serviceaccount.yaml
+    set:
+      commonLabels:
+        team: backend
+      serviceAccounts:
+        my-sa:
+          annotations: {}
+    asserts:
+      - equal:
+          path: metadata.labels.team
+          value: backend
+
+  # ---------------------------------------------------------------------------
+  # PodDisruptionBudget
+  # ---------------------------------------------------------------------------
+  - it: "renders a PDB with minAvailable"
+    template: pdb.yaml
+    set:
+      podDisruptionBudgets:
+        app-pdb:
+          minAvailable: 1
+          selector:
+            matchLabels:
+              app: web
+    asserts:
+      - isKind:
+          of: PodDisruptionBudget
+      - equal:
+          path: spec.minAvailable
+          value: 1
+      - equal:
+          path: spec.selector.matchLabels.app
+          value: web
+
+  - it: "renders a PDB with maxUnavailable"
+    template: pdb.yaml
+    set:
+      podDisruptionBudgets:
+        app-pdb:
+          maxUnavailable: 1
+          selector:
+            matchLabels:
+              app: web
+    asserts:
+      - equal:
+          path: spec.maxUnavailable
+          value: 1
+
+  - it: "renders nothing when podDisruptionBudgets is empty"
+    template: pdb.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  # ---------------------------------------------------------------------------
+  # NetworkPolicy
+  # ---------------------------------------------------------------------------
+  - it: "renders a NetworkPolicy"
+    template: networkpolicy.yaml
+    set:
+      networkPolicies:
+        default-deny:
+          podSelector: {}
+          policyTypes: [Ingress, Egress]
+          ingress: []
+          egress: []
+    asserts:
+      - isKind:
+          of: NetworkPolicy
+      - equal:
+          path: spec.policyTypes[0]
+          value: Ingress
+
+  - it: "renders nothing when networkPolicies is empty"
+    template: networkpolicy.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "renders ingress and egress rules"
+    template: networkpolicy.yaml
+    set:
+      networkPolicies:
+        allow-app:
+          podSelector:
+            matchLabels:
+              app: web
+          policyTypes: [Ingress]
+          ingress:
+            - from:
+                - namespaceSelector:
+                    matchLabels:
+                      name: ingress
+              ports:
+                - port: 8080
+                  protocol: TCP
+    asserts:
+      - equal:
+          path: spec.ingress[0].from[0].namespaceSelector.matchLabels.name
+          value: ingress
+      - equal:
+          path: spec.ingress[0].ports[0].port
+          value: 8080

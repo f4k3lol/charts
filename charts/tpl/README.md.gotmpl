@@ -1,6 +1,5 @@
-# tpl
-
-Generic chart for templating Kubernetes resources from values. Supports Deployment/StatefulSet, Services, Ingresses, ConfigMaps, Secrets, HPA, and raw extra manifests. Designed for use as a single chart, multiple dependencies, or as-is.
+{{ template "chart.header" . }}
+{{ template "chart.description" . }}
 
 ## Usage modes
 
@@ -86,42 +85,4 @@ See [examples/](examples/) for full usage patterns:
 - [defaults-override.yaml](examples/defaults-override.yaml) — merge priority demo
 - [full-reference.yaml](examples/full-reference.yaml) — every possible value documented
 
-## Values
-
-| Key | Type | Default | Description |
-|-----|------|---------|-------------|
-| commonAnnotations | object | `{}` |  |
-| commonLabels | object | `{}` |  |
-| configMaps | object | `{}` | Config / Storage |
-| cronJobs | object | `{}` |  |
-| daemonSets | object | `{}` |  |
-| defaultContainer | object | `{}` |  |
-| defaultGrpcRoute | object | `{}` |  |
-| defaultHttpRoute | object | `{}` |  |
-| defaultIngress.defaultPathType | string | `"ImplementationSpecific"` |  |
-| defaultPod | object | `{"enableServiceLinks":false}` | Defaults (merged into every resource of the corresponding type) |
-| defaultService | object | `{}` |  |
-| defaultTcpRoute | object | `{}` |  |
-| defaultTlsRoute | object | `{}` |  |
-| defaultVolumeClaimTemplate.spec.accessModes[0] | string | `"ReadWriteOnce"` |  |
-| deployments | object | `{}` | Workloads |
-| extraManifests | list | `[]` | Escape hatch |
-| fullnameOverride | string | `""` |  |
-| gateways | object | `{}` |  |
-| global | object | `{}` |  |
-| grpcRoutes | object | `{}` |  |
-| httpRoutes | object | `{}` |  |
-| ingresses | object | `{}` |  |
-| jobs | object | `{}` |  |
-| nameOverride | string | `""` | Chart identity |
-| networkPolicies | object | `{}` |  |
-| persistentVolumeClaims | object | `{}` |  |
-| podDisruptionBudgets | object | `{}` |  |
-| podMonitors | object | `{}` |  |
-| secrets | object | `{}` |  |
-| serviceAccounts | object | `{}` | Cluster resources |
-| serviceMonitors | object | `{}` | Monitoring |
-| services | object | `{}` | Networking |
-| statefulSets | object | `{}` |  |
-| tcpRoutes | object | `{}` |  |
-| tlsRoutes | object | `{}` |  |
+{{ template "chart.valuesSection" . }}

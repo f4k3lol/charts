@@ -1,0 +1,27 @@
+# Patterns to ignore when building packages.
+.DS_Store
+# VCS
+.git/
+.gitignore
+.bzr/
+.bzrignore
+.hg/
+.hgignore
+.svn/
+# Backup files
+*.swp
+*.bak
+*.tmp
+*.orig
+*~
+# IDEs
+.project
+.idea/
+*.tmproj
+.vscode/
+# Dev/CI files
+tests/
+examples/
+CLAUDE.md
+README.md.gotmpl
+.helmdocsignore

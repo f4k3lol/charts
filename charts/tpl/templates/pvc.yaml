@@ -1,0 +1,19 @@
+{{- range $name, $spec := .Values.persistentVolumeClaims }}
+{{- if not (and (hasKey $spec "enabled") (not $spec.enabled)) }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  {{- include "tpl.metadata" (dict "context" $ "name" $name "labels" $spec.labels "annotations" $spec.annotations) | nindent 2 }}
+spec:
+  {{- with $spec.storageClassName }}
+  storageClassName: {{ . }}
+  {{- end }}
+  {{- with $spec.accessModes }}
+  accessModes: {{ toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with $spec.resources }}
+  resources: {{ toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{- end }}

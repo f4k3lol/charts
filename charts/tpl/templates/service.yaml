@@ -1,0 +1,58 @@
+{{- range $name, $spec := .Values.services }}
+{{- if not (and (hasKey $spec "enabled") (not $spec.enabled)) }}
+{{- $defaults := $.Values.defaultService | default dict }}
+{{- $merged := fromYaml (include "tpl.mergeDeep" (dict "base" $defaults "override" $spec)) }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  {{- include "tpl.metadata" (dict "context" $ "name" $name "labels" $merged.labels "annotations" $merged.annotations) | nindent 2 }}
+spec:
+  {{- with $merged.type }}
+  type: {{ . }}
+  {{- end }}
+  {{- with $merged.clusterIP }}
+  clusterIP: {{ . }}
+  {{- end }}
+  {{- with $merged.externalName }}
+  externalName: {{ . }}
+  {{- end }}
+  {{- with $merged.loadBalancerIP }}
+  loadBalancerIP: {{ . }}
+  {{- end }}
+  {{- if kindIs "bool" $merged.publishNotReadyAddresses }}
+  publishNotReadyAddresses: {{ $merged.publishNotReadyAddresses }}
+  {{- end }}
+  {{- with $merged.sessionAffinity }}
+  sessionAffinity: {{ . }}
+  {{- end }}
+  {{- with $merged.sessionAffinityConfig }}
+  sessionAffinityConfig: {{ toYaml . | nindent 4 }}
+  {{- end }}
+  {{- if $merged.selector }}
+  selector: {{ toYaml $merged.selector | nindent 4 }}
+  {{- else }}
+  selector:
+    {{- include "tpl.selectorLabels" $ | nindent 4 }}
+  {{- end }}
+  {{- with $merged.ports }}
+  ports:
+    {{- range . }}
+    - name: {{ .name }}
+      port: {{ .port }}
+      {{- with .targetPort }}
+      targetPort: {{ . }}
+      {{- end }}
+      {{- with .nodePort }}
+      nodePort: {{ . }}
+      {{- end }}
+      {{- with .protocol }}
+      protocol: {{ . }}
+      {{- end }}
+      {{- with .appProtocol }}
+      appProtocol: {{ . }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}

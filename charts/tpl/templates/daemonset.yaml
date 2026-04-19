@@ -1,0 +1,18 @@
+{{- range $name, $spec := .Values.daemonSets }}
+{{- if not (and (hasKey $spec "enabled") (not $spec.enabled)) }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  {{- include "tpl.metadata" (dict "context" $ "name" $name "labels" $spec.labels "annotations" $spec.annotations) | nindent 2 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "tpl.selectorLabels" $ | nindent 6 }}
+  {{- with $spec.updateStrategy }}
+  updateStrategy: {{ toYaml . | nindent 4 }}
+  {{- end }}
+  template:
+    {{- include "tpl.podSpec" (dict "workload" $spec "context" $) | nindent 4 }}
+{{- end }}
+{{- end }}

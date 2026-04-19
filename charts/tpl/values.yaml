@@ -1,81 +1,59 @@
-# -- Workload kind: Deployment (default) or StatefulSet
-kind: Deployment
+# =============================================================================
+# tpl v1.0.0 — default values
+# See examples/full-reference.yaml for all available keys with documentation.
+# =============================================================================
 
-# -- Replica count (ignored when autoscaling.enabled is true)
-replicas: 1
-
-# -- Image pull secrets
-imagePullSecrets: []
-
-# -- Override chart name in labels (important in multi-dependency mode)
+# -- Chart identity
 nameOverride: ""
-# -- Override full resource name
 fullnameOverride: ""
+commonLabels: {}
+commonAnnotations: {}
+global: {}
 
-# -- Pod annotations (supports tpl rendering)
-podAnnotations: {}
-# -- Pod security context
-podSecurityContext: {}
-# -- Inject k8s service env vars into pods
-enableServiceLinks: false
-# -- Node selector
-nodeSelector: {}
-# -- Topology spread constraints (labelSelector auto-injected)
-topologySpreadConstraints: []
-# -- Tolerations
-tolerations: []
-# -- Affinity rules
-affinity: {}
-# -- Termination grace period
-terminationGracePeriodSeconds: null
-# -- Pod restart policy
-restartPolicy: ""
-# -- Service account name
-serviceAccountName: ""
-
-# -- Deployment strategy (kind: Deployment only)
-strategy:
-  type: RollingUpdate
-
-# -- HPA settings (kind: Deployment only)
-autoscaling:
-  enabled: false
-  minReplicas: 1
-  maxReplicas: 20
-  behavior: {}
-  metrics: []
-
-# -- StatefulSet: service name
-serviceName: ""
-# -- StatefulSet: min ready seconds
-minReadySeconds: 0
-# -- StatefulSet: pod management policy
-podManagementPolicy: OrderedReady
-# -- StatefulSet: update strategy
-updateStrategy: {}
-# -- StatefulSet: PVC retention policy
-persistentVolumeClaimRetentionPolicy: {}
-# -- StatefulSet: volume claim templates
-volumeClaimTemplates: []
-
-# -- Defaults merged into each container
+# -- Defaults (merged into every resource of the corresponding type)
+defaultPod:
+  enableServiceLinks: false
 defaultContainer: {}
-# -- Defaults merged into each service
 defaultService: {}
-# -- Defaults merged into each ingress
-defaultIngress: {}
-# -- Defaults merged into each volumeClaimTemplate
+defaultIngress:
+  defaultPathType: ImplementationSpecific
+defaultHttpRoute: {}
+defaultGrpcRoute: {}
+defaultTcpRoute: {}
+defaultTlsRoute: {}
 defaultVolumeClaimTemplate:
   spec:
     accessModes: ["ReadWriteOnce"]
 
-# -- Containers map (name -> spec)
-containers: {}
-# -- Services map (name -> spec)
+# -- Workloads
+deployments: {}
+statefulSets: {}
+daemonSets: {}
+jobs: {}
+cronJobs: {}
+
+# -- Networking
 services: {}
-# -- ConfigMaps map (name -> spec)
+ingresses: {}
+httpRoutes: {}
+grpcRoutes: {}
+tcpRoutes: {}
+tlsRoutes: {}
+gateways: {}
+networkPolicies: {}
+
+# -- Config / Storage
 configMaps: {}
-# -- Secrets map (name -> spec)
 secrets: {}
-# -- Raw manifests rendered as-is (supports tpl rendering)
+persistentVolumeClaims: {}
+
+# -- Cluster resources
+serviceAccounts: {}
+podDisruptionBudgets: {}
+
+# -- Monitoring
+serviceMonitors: {}
+podMonitors: {}
+
+# -- Escape hatch
 extraManifests: []

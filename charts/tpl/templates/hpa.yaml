@@ -1,0 +1,22 @@
+{{- range $name, $spec := .Values.deployments }}
+{{- if and (not (and (hasKey $spec "enabled") (not $spec.enabled))) (($spec.autoscaling | default dict).enabled) }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  {{- include "tpl.metadata" (dict "context" $ "name" $name "labels" nil "annotations" nil) | nindent 2 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "tpl.resourceName" (dict "context" $ "name" $name) }}
+  minReplicas: {{ $spec.autoscaling.minReplicas | default 1 }}
+  maxReplicas: {{ $spec.autoscaling.maxReplicas | default 10 }}
+  {{- with $spec.autoscaling.metrics }}
+  metrics: {{ toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with $spec.autoscaling.behavior }}
+  behavior: {{ toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{- end }}
