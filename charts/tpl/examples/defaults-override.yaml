@@ -1,0 +1,85 @@
+# Example showing how default values get overridden at each level.
+#
+# Override priority (lowest to highest):
+#   global < defaultPod/defaultContainer/defaultService/... < resource-level
+#
+# In this example:
+# - global sets image.registry for all subcharts
+# - defaultContainer sets shared resources and security for all containers
+# - Each container can override any defaultContainer value
+# - defaultPod sets shared pod settings for all workloads
+# - Each workload can override any defaultPod value
+
+global:
+  image:
+    registry: registry.internal.com    # lowest priority, passed to subcharts
+
+defaultPod:
+  nodeSelector:
+    kubernetes.io/os: linux            # all workloads get this...
+  tolerations: []
+  terminationGracePeriodSeconds: 30
+
+defaultContainer:
+  image:
+    registry: docker.io               # overrides global.image.registry
+  imagePullPolicy: IfNotPresent
+  resources:                           # all containers get these resources...
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+
+defaultService:
+  type: ClusterIP                      # all services default to ClusterIP...
+
+deployments:
+  # This workload inherits defaultPod but overrides terminationGracePeriodSeconds
+  api:
+    replicas: 2
+    terminationGracePeriodSeconds: 60  # overrides defaultPod's 30
+    containers:
+      api:
+        image:
+          repository: my-api
+          tag: "1.0.0"
+        # resources NOT set — inherits defaultContainer's requests/limits
+        ports:
+          - name: http
+            containerPort: 8080
+            protocol: TCP
+
+  # This workload inherits defaultPod as-is (terminationGracePeriodSeconds=30)
+  worker:
+    replicas: 1
+    nodeSelector:
+      kubernetes.io/os: linux
+      node-type: compute               # extends defaultPod's nodeSelector
+    containers:
+      worker:
+        image:
+          registry: ghcr.io            # overrides defaultContainer's docker.io
+          repository: my-worker
+          tag: "1.0.0"
+        resources:                     # overrides defaultContainer's resources
+          requests:
+            cpu: 500m
+            memory: 512Mi
+          limits:
+            memory: 1Gi
+
+services:
+  api:
+    ports:
+      - name: http
+        port: 80
+        targetPort: 8080
+    # type not set — inherits defaultService's ClusterIP
+
+  worker-metrics:
+    type: NodePort                     # overrides defaultService's ClusterIP
+    ports:
+      - name: metrics
+        port: 9090
+        nodePort: 30090

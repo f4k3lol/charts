@@ -1,7 +1,7 @@
 {{- range $svc_name, $svc_spec := .Values.services }}
   {{- $merged_svc_spec := mustMergeOverwrite (dict) $.Values.global.defaultService $.Values.defaultService $svc_spec }}
   {{- range $ingress_name, $ingress_spec := $merged_svc_spec.ingresses }}
-    {{- $merged_ingress_spec := mustMergeOverwrite (dict) $.Values.global.defaultIngress $.Values.defaultIngress $ingress_spec }}
+    {{- $merged_ingress_spec := mustMergeOverwrite (dict) (deepCopy $.Values.global.defaultIngress) (deepCopy $.Values.defaultIngress) $ingress_spec }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress

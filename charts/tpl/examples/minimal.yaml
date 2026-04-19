@@ -1,0 +1,25 @@
+# Minimal example — single Deployment with a Service
+deployments:
+  app:
+    replicas: 1
+    containers:
+      app:
+        image:
+          repository: nginx
+          tag: "1.27"
+        ports:
+          - name: http
+            containerPort: 80
+            protocol: TCP
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            memory: 256Mi
+
+services:
+  app:
+    ports:
+      - name: http
+        port: 80

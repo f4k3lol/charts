@@ -1,0 +1,1162 @@
+# ============================================================================
+# Full reference — tpl v1.0.0 (map-based workload approach)
+# Every possible value documented. Sections marked with [NEW] for new features
+# or [IMPROVED] for changes compared to the old tpl chart.
+# ============================================================================
+
+# =============================================================================
+# CHART IDENTITY — used in labels and resource names.
+# =============================================================================
+
+# Override chart name in selector labels. Important in multi-dependency mode
+# to avoid label collisions between aliased subcharts.
+nameOverride: ""
+# Override the full resource name (default: release name).
+fullnameOverride: ""
+
+# [NEW] commonLabels — applied to every rendered resource's metadata.labels.
+# Useful for org-wide tags (cost center, team, part-of).
+commonLabels:
+  app.kubernetes.io/part-of: my-platform
+  team: backend
+
+# [NEW] commonAnnotations — applied to every rendered resource's metadata.annotations.
+commonAnnotations: {}
+  # owner: team-backend@example.com
+
+# [NEW] global — Helm-native key passed to subcharts automatically.
+# Has the LOWEST override priority: global < defaults < resource-level.
+# Useful when this chart is a dependency and the parent chart sets shared values.
+global: {}
+  # image:
+  #   registry: docker.io
+  # commonLabels:
+  #   environment: production
+
+# =============================================================================
+# DEFAULTS — merged into every resource of the corresponding type.
+# =============================================================================
+
+# [IMPROVED] defaultPod — shared pod-level settings merged into every workload.
+# Eliminates ambiguity of "which workload do these apply to?"
+# All pod-level keys available in workload specs can be used here.
+defaultPod:
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  enableServiceLinks: false
+  nodeSelector:
+    kubernetes.io/os: linux
+  tolerations: []
+  affinity: {}
+  terminationGracePeriodSeconds: 30
+  dnsPolicy: ClusterFirst
+  # podLabels: {}
+  # podAnnotations: {}
+  # imagePullSecrets: []
+  # serviceAccountName: ""
+  # restartPolicy: ""
+  # topologySpreadConstraints: []
+  # dnsConfig: {}
+  # hostNetwork: false
+  # hostPID: false
+
+# Merged into every container in any workload (including initContainers).
+# All container-level keys can be used here.
+defaultContainer:
+  image:
+    registry: docker.io
+    # repository and tag set per container
+  imagePullPolicy: IfNotPresent
+  securityContext:
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: [ALL]
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+  # ports: []
+  # command: []
+  # args: []
+  # workingDir: ""
+  # env: {}
+  # envFrom: []
+  # configs: {}
+  # volumeMounts: []
+  # livenessProbe: {}
+  # readinessProbe: {}
+  # startupProbe: {}
+  # lifecycle: {}
+
+# Merged into every service in `services`.
+# All keys available in a service spec can be used here.
+defaultService:
+  type: ClusterIP
+  # annotations: {}
+  # ports: []
+  # clusterIP:
+  # loadBalancerIP:
+  # externalName:
+  # publishNotReadyAddresses: false
+  # sessionAffinity: None
+  # sessionAffinityConfig: {}
+  # [NEW] selector override — by default auto-set to chart selectorLabels.
+  # Override to point a service at pods from a different workload.
+  # selector: {}
+
+# [IMPROVED] Merged into every ingress (top-level and nested under services).
+defaultIngress:
+  className: nginx
+  defaultPathType: Prefix
+  annotations: {}
+  # labels: {}
+  # tls: []
+  # hosts: []
+  # paths:
+  #   - path: /
+  #     type: Prefix
+  # servicePortNumber:
+  # servicePortName:
+
+# [NEW] Merged into every httpRoute (top-level and nested under services).
+defaultHttpRoute: {}
+  # parentRefs:
+  #   - name: main-gateway
+  #     namespace: infra
+  # hostnames: []
+  # rules: []
+
+# [NEW] Merged into every grpcRoute.
+defaultGrpcRoute: {}
+  # parentRefs:
+  #   - name: main-gateway
+  #     namespace: infra
+  # hostnames: []
+  # rules: []
+
+# [NEW] Merged into every tcpRoute.
+defaultTcpRoute: {}
+  # parentRefs:
+  #   - name: main-gateway
+  #     namespace: infra
+  # rules: []
+
+# [NEW] Merged into every tlsRoute.
+defaultTlsRoute: {}
+  # parentRefs:
+  #   - name: main-gateway
+  #     namespace: infra
+  # hostnames: []
+  # rules: []
+
+# Merged into each volumeClaimTemplate (StatefulSet).
+defaultVolumeClaimTemplate:
+  spec:
+    accessModes: ["ReadWriteOnce"]
+    # storageClassName: standard
+    # resources:
+    #   requests:
+    #     storage: 10Gi
+
+# =============================================================================
+# WORKLOADS — map of name -> spec. Pod settings live inside each workload.
+# [NEW] every workload supports `enabled` flag (default: true).
+# Set `enabled: false` to skip rendering — useful for per-environment overrides.
+# =============================================================================
+
+# --- Deployments -------------------------------------------------------------
+deployments:
+  app:
+    # enabled: true  # [NEW] set false to disable in specific environments
+    replicas: 2
+
+    # Pod-level overrides (merged on top of defaultPod)
+    podLabels:
+      sidecar.istio.io/inject: "true"
+      app.kubernetes.io/component: backend
+    podAnnotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "8080"
+    imagePullSecrets:
+      - name: my-registry-secret
+    serviceAccountName: my-service-account
+    terminationGracePeriodSeconds: 60
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: DoNotSchedule
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                  - key: app.kubernetes.io/name
+                    operator: In
+                    values: [tpl]
+              topologyKey: kubernetes.io/hostname
+
+    # Deployment-specific
+    strategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxSurge: 1
+        maxUnavailable: 0
+
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 300
+          policies:
+            - type: Percent
+              value: 10
+              periodSeconds: 60
+      metrics:
+        - type: Resource
+          resource:
+            name: cpu
+            target:
+              type: Utilization
+              averageUtilization: 75
+
+    # [NEW] auto-restart on config change — adds checksum annotation to pod
+    # template so the Deployment rolls when referenced ConfigMaps/Secrets change.
+    checksumAnnotations:
+      - configMaps/app-config
+      - secrets/app-secrets
+
+    # [IMPROVED] volumes at workload/pod level — shared between all containers.
+    # Eliminates duplicate volume definitions when multiple containers mount
+    # the same volume. Containers only declare volumeMounts.
+    volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: cache
+        emptyDir:
+          sizeLimit: 100Mi
+          medium: Memory
+      - name: data
+        persistentVolumeClaim:
+          claimName: my-pvc
+      # [NEW] projected volumes — combine multiple sources into one mount
+      - name: all-config
+        projected:
+          sources:
+            - configMap:
+                name: app-config
+            - secret:
+                name: app-secrets
+                items:
+                  - key: db-password
+                    path: db-password
+      # [NEW] CSI volumes (e.g. Secrets Store CSI Driver)
+      # - name: secrets-store
+      #   csi:
+      #     driver: secrets-store.csi.k8s.io
+      #     readOnly: true
+      #     volumeAttributes:
+      #       secretProviderClass: my-provider
+
+    # [NEW] initContainers — same schema as containers
+    initContainers:
+      wait-for-db:
+        image:
+          repository: busybox
+          tag: "1.36"
+        command: ["sh", "-c"]
+        args:
+          - |
+            until nc -z postgres.default.svc.cluster.local 5432; do
+              echo "waiting for postgres..."
+              sleep 2
+            done
+
+      run-migrations:
+        image:
+          repository: my-app
+          tag: "1.2.3"
+        command: ["/app/migrate"]
+        env:
+          DB_URL:
+            from: secret
+            name: app-secrets
+            key: db-url
+
+    containers:
+      app:
+        image:
+          # registry: docker.io          — inherited from defaultContainer
+          # imagePullPolicy: IfNotPresent — inherited from defaultContainer
+          repository: my-app
+          tag: "1.2.3"
+          # [NEW] digest — pin to exact image, takes precedence over tag
+          # digest: "sha256:abcdef1234567890..."
+
+        # [NEW] imageString — plain string alternative, bypasses registry/repository/tag
+        # imageString: "docker.io/myorg/my-app:1.2.3"
+
+        # workingDir: /app
+
+        ports:
+          - name: http
+            containerPort: 8080
+            protocol: TCP
+          - name: metrics
+            containerPort: 9090
+            protocol: TCP
+
+        resources:
+          requests:
+            cpu: 250m
+            memory: 256Mi
+          limits:
+            memory: 1Gi
+
+        # [NEW] startupProbe — for slow-starting apps
+        startupProbe:
+          httpGet:
+            path: /healthz
+            port: http
+          periodSeconds: 5
+          failureThreshold: 30
+
+        # All three probe types supported: httpGet, exec, tcpSocket
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: http
+          # exec alternative:
+          #   command: ["/bin/sh", "-c", "curl -f http://localhost:8080/healthz"]
+          # tcpSocket alternative:
+          #   port: 8080
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+          # exec alternative:
+          #   command: ["/app/readiness-check"]
+          # tcpSocket alternative:
+          #   port: 8080
+          periodSeconds: 5
+          timeoutSeconds: 2
+          failureThreshold: 3
+
+        # [NEW] lifecycle hooks
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/bin/sh", "-c", "sleep 5"]
+
+        env:
+          APP_NAME:
+            value: my-app
+          LOG_LEVEL:
+            value: info
+          RELEASE_NAME:
+            value: "{{ .Release.Name }}"
+          DB_HOST:
+            from: configMap
+            name: app-config
+            key: db-host
+          DB_PASSWORD:
+            from: secret
+            name: app-secrets
+            key: db-password
+
+        # [NEW] envFrom — bulk-mount all keys from ConfigMap/Secret
+        envFrom:
+          - configMapRef:
+              name: app-config
+          - secretRef:
+              name: app-secrets
+            prefix: SECRET_
+
+        configs:
+          app-config-file:
+            mountPath: /etc/app/config.yaml
+            from: configMap
+            name: app-config
+            key: config.yaml
+          # [NEW] mount entire configmap as directory (no key = all keys)
+          app-config-dir:
+            mountPath: /etc/app/conf.d/
+            from: configMap
+            name: app-extra-config
+            defaultMode: 0444
+
+        # [IMPROVED] volumeMounts — references pod-level volumes by name.
+        # Volume definitions live under the workload's `volumes`, not here.
+        volumeMounts:
+          - name: tmp
+            mountPath: /tmp
+          - name: cache
+            mountPath: /var/cache
+          - name: data
+            mountPath: /data
+            subPath: app-data
+            readOnly: true
+          - name: all-config
+            mountPath: /etc/all-config
+            readOnly: true
+
+      # Sidecar container — shares pod-level volumes with app container
+      sidecar:
+        image:
+          repository: fluentbit
+          tag: "2.1"
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            memory: 128Mi
+        env:
+          FLUSH_INTERVAL:
+            value: "5"
+        volumeMounts:
+          - name: tmp
+            mountPath: /tmp
+
+# --- StatefulSets ------------------------------------------------------------
+statefulSets:
+  redis:
+    # enabled: true
+    replicas: 3
+    serviceName: redis-headless
+    podManagementPolicy: OrderedReady
+    minReadySeconds: 0
+    updateStrategy:
+      type: RollingUpdate
+      rollingUpdate:
+        partition: 0
+    persistentVolumeClaimRetentionPolicy:
+      whenDeleted: Retain
+      whenScaled: Delete
+
+    volumeClaimTemplates:
+      - metadata:
+          name: data
+        spec:
+          storageClassName: fast-ssd
+          resources:
+            requests:
+              storage: 10Gi
+
+    containers:
+      redis:
+        image:
+          repository: redis
+          tag: "7.2-alpine"
+        ports:
+          - name: redis
+            containerPort: 6379
+            protocol: TCP
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            memory: 1Gi
+        livenessProbe:
+          exec:
+            command: ["redis-cli", "ping"]
+          periodSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command: ["redis-cli", "ping"]
+          periodSeconds: 5
+        volumeMounts:
+          - name: data
+            mountPath: /data
+
+# --- DaemonSets --------------------------------------------------------------
+# [NEW] daemonSets — one pod per node (log collectors, monitoring agents).
+daemonSets:
+  log-collector:
+    # enabled: true
+    updateStrategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxUnavailable: 1
+    serviceAccountName: log-collector-sa
+    podAnnotations:
+      prometheus.io/scrape: "true"
+    tolerations:
+      - operator: Exists  # run on all nodes including masters
+    podSecurityContext:
+      runAsUser: 0
+
+    volumes:
+      - name: varlog
+        hostPath:
+          path: /var/log
+      - name: containers
+        hostPath:
+          path: /var/lib/docker/containers
+
+    containers:
+      fluentbit:
+        image:
+          registry: cr.fluentbit.io
+          repository: fluent/fluent-bit
+          tag: "3.1"
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        ports:
+          - name: metrics
+            containerPort: 2020
+            protocol: TCP
+        volumeMounts:
+          - name: varlog
+            mountPath: /var/log
+            readOnly: true
+          - name: containers
+            mountPath: /var/lib/docker/containers
+            readOnly: true
+        configs:
+          fluent-bit-conf:
+            mountPath: /fluent-bit/etc/fluent-bit.conf
+            from: configMap
+            name: fluentbit-config
+            key: fluent-bit.conf
+
+  node-exporter:
+    # enabled: true
+    updateStrategy:
+      type: RollingUpdate
+    tolerations:
+      - operator: Exists
+    # [NEW] hostNetwork / hostPID — needed by some node-level agents
+    hostNetwork: true
+    hostPID: true
+
+    volumes:
+      - name: root
+        hostPath:
+          path: /
+
+    containers:
+      exporter:
+        image:
+          repository: prom/node-exporter
+          tag: "1.8.1"
+        args: ["--path.rootfs=/host"]
+        ports:
+          - name: metrics
+            containerPort: 9100
+            protocol: TCP
+        resources:
+          requests:
+            cpu: 50m
+            memory: 32Mi
+          limits:
+            memory: 64Mi
+        volumeMounts:
+          - name: root
+            mountPath: /host
+            readOnly: true
+
+# --- Jobs --------------------------------------------------------------------
+# [NEW] jobs — one-off tasks (migrations, data imports, cleanup).
+jobs:
+  db-migrate:
+    # enabled: true
+    backoffLimit: 3
+    activeDeadlineSeconds: 600
+    ttlSecondsAfterFinished: 3600
+    completions: 1
+    parallelism: 1
+    restartPolicy: OnFailure
+    serviceAccountName: my-service-account
+
+    containers:
+      migrate:
+        image:
+          repository: my-app
+          tag: "1.2.3"
+        command: ["/app/migrate"]
+        args: ["--target", "latest"]
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            memory: 512Mi
+        env:
+          DB_URL:
+            from: secret
+            name: app-secrets
+            key: db-url
+
+  seed-data:
+    # enabled: true
+    backoffLimit: 1
+    ttlSecondsAfterFinished: 300
+    restartPolicy: Never
+    containers:
+      seed:
+        image:
+          repository: my-app
+          tag: "1.2.3"
+        command: ["/app/seed"]
+        env:
+          DB_URL:
+            from: secret
+            name: app-secrets
+            key: db-url
+
+# --- CronJobs ----------------------------------------------------------------
+# [NEW] cronJobs — scheduled recurring tasks (backups, reports, cleanup).
+cronJobs:
+  db-backup:
+    # enabled: true
+    schedule: "0 2 * * *"
+    concurrencyPolicy: Forbid
+    successfulJobsHistoryLimit: 3
+    failedJobsHistoryLimit: 5
+    startingDeadlineSeconds: 300
+    suspend: false
+    # timeZone: "Europe/Moscow"  # k8s 1.27+
+
+    # Job template settings
+    backoffLimit: 2
+    activeDeadlineSeconds: 3600
+    ttlSecondsAfterFinished: 86400
+    restartPolicy: OnFailure
+
+    volumes:
+      - name: backup
+        persistentVolumeClaim:
+          claimName: backup-pvc
+
+    containers:
+      backup:
+        image:
+          repository: postgres
+          tag: "16-alpine"
+        command: ["sh", "-c"]
+        args:
+          - pg_dump $DB_URL | gzip > /backup/db-$(date +%Y%m%d).sql.gz
+        env:
+          DB_URL:
+            from: secret
+            name: app-secrets
+            key: db-url
+        volumeMounts:
+          - name: backup
+            mountPath: /backup
+
+  cleanup-sessions:
+    # enabled: true
+    schedule: "*/30 * * * *"
+    concurrencyPolicy: Replace
+    successfulJobsHistoryLimit: 1
+    failedJobsHistoryLimit: 3
+    backoffLimit: 1
+    restartPolicy: OnFailure
+
+    containers:
+      cleanup:
+        image:
+          repository: my-app
+          tag: "1.2.3"
+        command: ["/app/cleanup-sessions"]
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            memory: 128Mi
+
+# =============================================================================
+# NETWORKING
+# =============================================================================
+
+# --- Services ----------------------------------------------------------------
+services:
+  my-app:
+    # enabled: true
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "9090"
+    ports:
+      - name: http
+        port: 80
+        targetPort: 8080
+        protocol: TCP
+        # [NEW] appProtocol for mesh/gateway API
+        appProtocol: http
+      - name: metrics
+        port: 9090
+
+    # Nested ingresses — serviceName is inherited from parent (my-app).
+    # Same schema as top-level ingresses, minus serviceName.
+    ingresses:
+      my-app-nested:
+        className: nginx
+        annotations:
+          nginx.ingress.kubernetes.io/ssl-redirect: "true"
+        tls:
+          - secretName: my-app-tls
+            hosts:
+              - nested.example.com
+        hosts:
+          - nested.example.com
+        paths:
+          - path: /
+            type: Prefix
+        servicePortNumber: 80
+
+    # Nested httpRoutes — backendRefs default to parent service.
+    # Can still override backendRefs explicitly for traffic splitting.
+    httpRoutes:
+      my-app-nested-route:
+        parentRefs:
+          - name: main-gateway
+            namespace: infra
+        hostnames:
+          - nested.example.com
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            # backendRefs auto-generated: name=my-app, port from servicePortNumber
+            servicePortNumber: 80
+
+  # Headless service (for StatefulSet)
+  redis-headless:
+    clusterIP: None
+    # [NEW] publishNotReadyAddresses for headless STS services
+    publishNotReadyAddresses: true
+    ports:
+      - name: redis
+        port: 6379
+
+  # NodePort example
+  # my-app-nodeport:
+  #   type: NodePort
+  #   ports:
+  #     - name: http
+  #       port: 80
+  #       targetPort: 8080
+  #       nodePort: 30080
+
+  # LoadBalancer example
+  # my-app-lb:
+  #   type: LoadBalancer
+  #   loadBalancerIP: 10.0.0.100
+  #   ports:
+  #     - name: http
+  #       port: 80
+
+  # ExternalName example
+  # external-db:
+  #   type: ExternalName
+  #   externalName: db.example.com
+
+  # [NEW] Service with custom selector — points at pods from multiple workloads
+  # my-app-combined:
+  #   ports:
+  #     - name: http
+  #       port: 80
+  #   selector:
+  #     app.kubernetes.io/component: backend
+
+# --- Ingresses ---------------------------------------------------------------
+# [IMPROVED] promoted to top-level with explicit serviceName.
+ingresses:
+  my-app-public:
+    # enabled: true
+    className: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/rate-limit: "100"
+    # [NEW] per-ingress labels
+    labels:
+      external-dns.alpha.kubernetes.io/managed: "true"
+    tls:
+      - secretName: my-app-tls
+        hosts:
+          - app.example.com
+    hosts:
+      - app.example.com
+    paths:
+      - path: /
+        type: Prefix
+      - path: /api
+        type: Prefix
+    serviceName: my-app
+    servicePortNumber: 80
+    # or: servicePortName: http
+
+  my-app-internal:
+    className: nginx-internal
+    hosts:
+      - app.internal.local
+    paths:
+      - path: /
+    serviceName: my-app
+    servicePortName: http
+
+# --- HTTPRoutes (Gateway API) ------------------------------------------------
+# [NEW] httpRoutes — Gateway API replacement for Ingress.
+httpRoutes:
+  my-app:
+    parentRefs:
+      - name: main-gateway
+        namespace: infra
+        sectionName: https
+    hostnames:
+      - app.example.com
+    rules:
+      - matches:
+          - path:
+              type: PathPrefix
+              value: /
+        backendRefs:
+          - name: my-app
+            port: 80
+            weight: 100
+
+  # Canary / traffic splitting example
+  my-app-canary:
+    parentRefs:
+      - name: main-gateway
+        namespace: infra
+    hostnames:
+      - app.example.com
+    rules:
+      - matches:
+          - path:
+              type: PathPrefix
+              value: /
+          - headers:
+              - name: x-canary
+                value: "true"
+        backendRefs:
+          - name: my-app
+            port: 80
+            weight: 90
+          - name: my-app-canary
+            port: 80
+            weight: 10
+
+# [NEW] grpcRoutes — Gateway API for gRPC services.
+grpcRoutes:
+  my-app-grpc:
+    parentRefs:
+      - name: main-gateway
+        namespace: infra
+        sectionName: https
+    hostnames:
+      - grpc.example.com
+    rules:
+      - matches:
+          - method:
+              service: my.package.MyService
+              method: GetItem
+        backendRefs:
+          - name: my-app
+            port: 9090
+      # Catch-all for all gRPC methods
+      - backendRefs:
+          - name: my-app
+            port: 9090
+
+# [NEW] tcpRoutes — Gateway API for raw TCP (databases, message brokers).
+tcpRoutes:
+  redis-tcp:
+    parentRefs:
+      - name: main-gateway
+        namespace: infra
+        sectionName: redis-tcp
+    rules:
+      - backendRefs:
+          - name: redis-headless
+            port: 6379
+
+# [NEW] tlsRoutes — Gateway API for TLS passthrough.
+tlsRoutes:
+  my-app-passthrough:
+    parentRefs:
+      - name: main-gateway
+        namespace: infra
+        sectionName: tls-passthrough
+    hostnames:
+      - secure.example.com
+    rules:
+      - backendRefs:
+          - name: my-app
+            port: 8443
+
+# --- Gateways ----------------------------------------------------------------
+# [NEW] gateways — Gateway API Gateway resource.
+# Usually infra-level, but useful for self-contained charts.
+gateways:
+  main-gateway:
+    gatewayClassName: istio  # or: nginx, envoy, cilium, etc.
+    listeners:
+      - name: http
+        protocol: HTTP
+        port: 80
+        allowedRoutes:
+          namespaces:
+            from: Same
+      - name: https
+        protocol: HTTPS
+        port: 443
+        tls:
+          mode: Terminate
+          certificateRefs:
+            - name: my-app-tls
+        allowedRoutes:
+          namespaces:
+            from: Same
+      - name: redis-tcp
+        protocol: TCP
+        port: 6379
+        allowedRoutes:
+          namespaces:
+            from: Same
+      - name: tls-passthrough
+        protocol: TLS
+        port: 8443
+        tls:
+          mode: Passthrough
+        allowedRoutes:
+          namespaces:
+            from: Same
+
+# --- NetworkPolicies ----------------------------------------------------------
+# [NEW] networkPolicies — first-class support.
+networkPolicies:
+  default-deny:
+    podSelector: {}
+    policyTypes: [Ingress, Egress]
+    ingress: []
+    egress: []
+
+  allow-app:
+    podSelector:
+      matchLabels:
+        app.kubernetes.io/name: tpl
+    policyTypes: [Ingress, Egress]
+    ingress:
+      - from:
+          - namespaceSelector:
+              matchLabels:
+                kubernetes.io/metadata.name: ingress-nginx
+        ports:
+          - port: 8080
+            protocol: TCP
+    egress:
+      - to:
+          - namespaceSelector: {}
+        ports:
+          - port: 5432
+            protocol: TCP
+          - port: 53
+            protocol: UDP
+
+# =============================================================================
+# CONFIG / STORAGE
+# =============================================================================
+
+configMaps:
+  app-config:
+    labels:
+      app.kubernetes.io/component: config
+    annotations:
+      description: "Main application config"
+    data:
+      db-host: "postgres.default.svc.cluster.local"
+      config.yaml: |
+        server:
+          port: 8080
+          graceful_shutdown: 30s
+        database:
+          pool_size: 10
+  # [NEW] binaryData support
+  app-binary:
+    binaryData:
+      logo.png: "iVBORw0KGgo..."
+
+secrets:
+  app-secrets:
+    type: Opaque
+    stringData:
+      db-password: "supersecret123"
+      db-url: "postgres://app:supersecret123@postgres:5432/mydb"
+
+  # TLS certificate
+  my-app-tls:
+    type: kubernetes.io/tls
+    stringData:
+      tls.crt: |
+        -----BEGIN CERTIFICATE-----
+        MIIDazCCAlOgAwIBAgIUY...
+        -----END CERTIFICATE-----
+      tls.key: |
+        -----BEGIN PRIVATE KEY-----
+        MIIEvQIBADANBgkqhkiG9...
+        -----END PRIVATE KEY-----
+    # Or base64 via data:
+    # data:
+    #   tls.crt: LS0tLS1CRUdJTi...
+    #   tls.key: LS0tLS1CRUdJTi...
+
+  # Docker registry credentials
+  my-registry-secret:
+    type: kubernetes.io/dockerconfigjson
+    stringData:
+      .dockerconfigjson: |
+        {"auths":{"registry.example.com":{"username":"user","password":"pass","auth":"dXNlcjpwYXNz"}}}
+
+  # Basic auth (e.g. for ingress auth)
+  basic-auth:
+    type: Opaque
+    data:
+      auth: "dXNlcjokYXByMSRCZHE..."
+
+# [NEW] persistentVolumeClaims — standalone PVCs (not StatefulSet VCTs)
+persistentVolumeClaims:
+  backup-pvc:
+    storageClassName: standard
+    accessModes: ["ReadWriteOnce"]
+    resources:
+      requests:
+        storage: 50Gi
+    # labels: {}
+    # annotations: {}
+
+# =============================================================================
+# CLUSTER RESOURCES
+# =============================================================================
+
+# [NEW] serviceAccounts — map of SA name -> spec
+serviceAccounts:
+  my-service-account:
+    annotations:
+      eks.amazonaws.com/role-arn: "arn:aws:iam::123456789:role/my-app-role"
+    labels: {}
+    automountServiceAccountToken: true
+
+  log-collector-sa:
+    annotations: {}
+
+# [NEW] podDisruptionBudgets — map of PDB name -> spec
+podDisruptionBudgets:
+  app-pdb:
+    minAvailable: 1
+    # or: maxUnavailable: 1
+    selector:
+      matchLabels:
+        app.kubernetes.io/component: backend
+
+# =============================================================================
+# MONITORING
+# =============================================================================
+
+# [NEW] serviceMonitors — Prometheus Operator CRD. First-class support
+# saves an extraManifests entry on nearly every production chart.
+serviceMonitors:
+  app-metrics:
+    # labels added to the ServiceMonitor resource (for Prometheus selector matching)
+    labels:
+      release: prometheus
+    # Which service(s) to scrape — matched by labels
+    selector:
+      matchLabels:
+        app.kubernetes.io/name: tpl
+    # Or: explicit service name
+    # serviceName: my-app
+    endpoints:
+      - port: metrics         # must match a named port in the Service
+        interval: 30s
+        scrapeTimeout: 10s
+        path: /metrics
+        # scheme: https
+        # tlsConfig:
+        #   insecureSkipVerify: true
+        # bearerTokenSecret:
+        #   name: prom-token
+        #   key: token
+        # metricRelabelings:
+        #   - sourceLabels: [__name__]
+        #     regex: "go_.*"
+        #     action: drop
+    # namespaceSelector:
+    #   matchNames: [my-namespace]
+
+  redis-metrics:
+    labels:
+      release: prometheus
+    selector:
+      matchLabels:
+        app.kubernetes.io/name: tpl
+    endpoints:
+      - port: redis-metrics
+        interval: 15s
+
+# [NEW] podMonitors — Prometheus Operator CRD for scraping pods directly.
+# Useful when there's no Service (e.g. CronJobs, Jobs, DaemonSets with hostNetwork).
+podMonitors:
+  node-exporter:
+    labels:
+      release: prometheus
+    selector:
+      matchLabels:
+        app.kubernetes.io/name: tpl
+    podMetricsEndpoints:
+      - port: metrics
+        interval: 30s
+        path: /metrics
+
+# =============================================================================
+# ESCAPE HATCH
+# =============================================================================
+
+# [IMPROVED] extraManifests — native YAML objects instead of strings.
+extraManifests:
+  - apiVersion: rbac.authorization.k8s.io/v1
+    kind: Role
+    metadata:
+      name: my-app-role
+    rules:
+      - apiGroups: [""]
+        resources: ["configmaps"]
+        verbs: ["get", "list"]
+  - apiVersion: rbac.authorization.k8s.io/v1
+    kind: RoleBinding
+    metadata:
+      name: my-app-rolebinding
+    subjects:
+      - kind: ServiceAccount
+        name: my-service-account
+    roleRef:
+      kind: Role
+      name: my-app-role
+      apiGroup: rbac.authorization.k8s.io

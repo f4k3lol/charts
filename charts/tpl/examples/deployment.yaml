@@ -1,0 +1,97 @@
+# Deployment with ingress, httpRoute, HPA, and config
+deployments:
+  web:
+    replicas: 2
+    strategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxSurge: 1
+        maxUnavailable: 0
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 8
+      metrics:
+        - type: Resource
+          resource:
+            name: cpu
+            target:
+              type: Utilization
+              averageUtilization: 75
+    containers:
+      web:
+        image:
+          repository: my-app
+          tag: "1.0.0"
+        ports:
+          - name: http
+            containerPort: 8080
+            protocol: TCP
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: http
+          periodSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+          periodSeconds: 5
+        env:
+          DB_HOST:
+            from: configMap
+            name: app-config
+            key: db-host
+          DB_PASSWORD:
+            from: secret
+            name: app-secrets
+            key: db-password
+
+services:
+  web:
+    ports:
+      - name: http
+        port: 80
+        targetPort: 8080
+    ingresses:
+      web:
+        hosts:
+          - app.example.com
+        tls:
+          - secretName: app-tls
+            hosts:
+              - app.example.com
+        paths:
+          - path: /
+            type: Prefix
+        servicePortNumber: 80
+    httpRoutes:
+      web:
+        parentRefs:
+          - name: main-gateway
+            namespace: infra
+        hostnames:
+          - app.example.com
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            servicePortNumber: 80
+
+configMaps:
+  app-config:
+    data:
+      db-host: "postgres.default.svc.cluster.local"
+
+secrets:
+  app-secrets:
+    stringData:
+      db-password: "changeme"
