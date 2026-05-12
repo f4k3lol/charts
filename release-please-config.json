@@ -1,0 +1,9 @@
+{
+  "packages": {
+    "charts/tpl": {
+      "release-type": "helm",
+      "bump-minor-pre-major": true,
+      "changelog-path": "CHANGELOG.md"
+    }
+  }
+}

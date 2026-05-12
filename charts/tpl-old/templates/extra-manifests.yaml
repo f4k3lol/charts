@@ -1,6 +1,0 @@
-{{ with .Values.extraManifests }}
-  {{- range $manifest := . }}
----
-{{ include "tpl.render" (list $ . $manifest) }}
-  {{- end }}
-{{- end }}
