@@ -1,0 +1,19 @@
+{{- range $name, $spec := .Values.podDisruptionBudgets }}
+{{- if not (and (hasKey $spec "enabled") (not $spec.enabled)) }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  {{- include "tpl.metadata" (dict "context" $ "name" $name "labels" $spec.labels "annotations" $spec.annotations) | nindent 2 }}
+spec:
+  {{- with $spec.minAvailable }}
+  minAvailable: {{ . }}
+  {{- end }}
+  {{- with $spec.maxUnavailable }}
+  maxUnavailable: {{ . }}
+  {{- end }}
+  {{- with $spec.selector }}
+  selector: {{ toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{- end }}

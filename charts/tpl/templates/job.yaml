@@ -1,0 +1,27 @@
+{{- range $name, $spec := .Values.jobs }}
+{{- if not (and (hasKey $spec "enabled") (not $spec.enabled)) }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  {{- include "tpl.metadata" (dict "context" $ "name" $name "labels" $spec.labels "annotations" $spec.annotations) | nindent 2 }}
+spec:
+  {{- with $spec.backoffLimit }}
+  backoffLimit: {{ . }}
+  {{- end }}
+  {{- with $spec.activeDeadlineSeconds }}
+  activeDeadlineSeconds: {{ . }}
+  {{- end }}
+  {{- with $spec.ttlSecondsAfterFinished }}
+  ttlSecondsAfterFinished: {{ . }}
+  {{- end }}
+  {{- with $spec.completions }}
+  completions: {{ . }}
+  {{- end }}
+  {{- with $spec.parallelism }}
+  parallelism: {{ . }}
+  {{- end }}
+  template:
+    {{- include "tpl.podSpec" (dict "workload" $spec "context" $) | nindent 4 }}
+{{- end }}
+{{- end }}

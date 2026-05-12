@@ -1,0 +1,18 @@
+{{- range .Values.extraManifests }}
+---
+{{- $manifest := deepCopy . }}
+{{- /* Inject commonLabels and commonAnnotations into metadata */ -}}
+{{- $meta := $manifest.metadata | default dict }}
+{{- if $.Values.commonLabels }}
+{{- $existingLabels := $meta.labels | default dict }}
+{{- $mergedLabels := mustMergeOverwrite (deepCopy $.Values.commonLabels) $existingLabels }}
+{{- $_ := set $meta "labels" $mergedLabels }}
+{{- end }}
+{{- if $.Values.commonAnnotations }}
+{{- $existingAnnotations := $meta.annotations | default dict }}
+{{- $mergedAnnotations := mustMergeOverwrite (deepCopy $.Values.commonAnnotations) $existingAnnotations }}
+{{- $_ := set $meta "annotations" $mergedAnnotations }}
+{{- end }}
+{{- $_ := set $manifest "metadata" $meta }}
+{{ toYaml $manifest }}
+{{- end }}

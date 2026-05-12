@@ -1,0 +1,92 @@
+{{/*
+Renders top-level ingresses AND nested ingresses under services.
+*/}}
+
+{{- /* Top-level ingresses */ -}}
+{{- range $name, $spec := .Values.ingresses }}
+{{- if not (and (hasKey $spec "enabled") (not $spec.enabled)) }}
+{{- $defaults := $.Values.defaultIngress | default dict }}
+{{- $merged := fromYaml (include "tpl.mergeDeep" (dict "base" $defaults "override" $spec)) }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  {{- include "tpl.metadata" (dict "context" $ "name" $name "labels" $merged.labels "annotations" $merged.annotations) | nindent 2 }}
+spec:
+  {{- with $merged.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- with $merged.tls }}
+  tls: {{ toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- $svcName := $merged.serviceName }}
+    {{- $portNum := $merged.servicePortNumber }}
+    {{- $portName := $merged.servicePortName }}
+    {{- $defaultPathType := $merged.defaultPathType | default "Prefix" }}
+    {{- range $merged.hosts }}
+    - host: {{ . }}
+      http:
+        paths:
+          {{- range $merged.paths }}
+          - path: {{ .path }}
+            pathType: {{ .type | default $defaultPathType }}
+            backend:
+              service:
+                name: {{ $svcName }}
+                port:
+                  {{- if $portNum }}
+                  number: {{ $portNum }}
+                  {{- else }}
+                  name: {{ $portName }}
+                  {{- end }}
+          {{- end }}
+    {{- end }}
+{{- end }}
+{{- end }}
+
+{{- /* Nested ingresses under services */ -}}
+{{- range $svcName, $svcSpec := .Values.services }}
+{{- range $ingName, $ingSpec := ($svcSpec.ingresses | default dict) }}
+{{- if ne (toString (default true $ingSpec.enabled)) "false" }}
+{{- $defaults := $.Values.defaultIngress | default dict }}
+{{- $withSvc := set (deepCopy $ingSpec) "serviceName" $svcName }}
+{{- $merged := fromYaml (include "tpl.mergeDeep" (dict "base" $defaults "override" $withSvc)) }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  {{- include "tpl.metadata" (dict "context" $ "name" $ingName "labels" $merged.labels "annotations" $merged.annotations) | nindent 2 }}
+spec:
+  {{- with $merged.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- with $merged.tls }}
+  tls: {{ toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- $serviceName := $merged.serviceName }}
+    {{- $portNum := $merged.servicePortNumber }}
+    {{- $portName := $merged.servicePortName }}
+    {{- $defaultPathType := $merged.defaultPathType | default "Prefix" }}
+    {{- range $merged.hosts }}
+    - host: {{ . }}
+      http:
+        paths:
+          {{- range $merged.paths }}
+          - path: {{ .path }}
+            pathType: {{ .type | default $defaultPathType }}
+            backend:
+              service:
+                name: {{ $serviceName }}
+                port:
+                  {{- if $portNum }}
+                  number: {{ $portNum }}
+                  {{- else }}
+                  name: {{ $portName }}
+                  {{- end }}
+          {{- end }}
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

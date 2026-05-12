@@ -1,0 +1,174 @@
+suite: job
+templates:
+  - job.yaml
+
+tests:
+  # ---------------------------------------------------------------------------
+  # Basic rendering
+  # ---------------------------------------------------------------------------
+  - it: "renders a Job"
+    set:
+      jobs:
+        migrate:
+          containers:
+            migrate:
+              image:
+                repository: my-app
+                tag: "1.0"
+              command: ["/app/migrate"]
+    asserts:
+      - isKind:
+          of: Job
+      - hasDocuments:
+          count: 1
+
+  - it: "renders nothing when jobs is empty"
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "enabled: false skips rendering"
+    set:
+      jobs:
+        migrate:
+          enabled: false
+          containers:
+            migrate:
+              image:
+                repository: my-app
+                tag: "1.0"
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  # ---------------------------------------------------------------------------
+  # Job-specific fields
+  # ---------------------------------------------------------------------------
+  - it: "sets backoffLimit"
+    set:
+      jobs:
+        migrate:
+          backoffLimit: 3
+          containers:
+            migrate:
+              image:
+                repository: my-app
+                tag: "1.0"
+    asserts:
+      - equal:
+          path: spec.backoffLimit
+          value: 3
+
+  - it: "sets activeDeadlineSeconds"
+    set:
+      jobs:
+        migrate:
+          activeDeadlineSeconds: 600
+          containers:
+            migrate:
+              image:
+                repository: my-app
+                tag: "1.0"
+    asserts:
+      - equal:
+          path: spec.activeDeadlineSeconds
+          value: 600
+
+  - it: "sets ttlSecondsAfterFinished"
+    set:
+      jobs:
+        migrate:
+          ttlSecondsAfterFinished: 3600
+          containers:
+            migrate:
+              image:
+                repository: my-app
+                tag: "1.0"
+    asserts:
+      - equal:
+          path: spec.ttlSecondsAfterFinished
+          value: 3600
+
+  - it: "sets completions and parallelism"
+    set:
+      jobs:
+        migrate:
+          completions: 5
+          parallelism: 2
+          containers:
+            migrate:
+              image:
+                repository: my-app
+                tag: "1.0"
+    asserts:
+      - equal:
+          path: spec.completions
+          value: 5
+      - equal:
+          path: spec.parallelism
+          value: 2
+
+  - it: "sets restartPolicy"
+    set:
+      jobs:
+        migrate:
+          restartPolicy: OnFailure
+          containers:
+            migrate:
+              image:
+                repository: my-app
+                tag: "1.0"
+    asserts:
+      - equal:
+          path: spec.template.spec.restartPolicy
+          value: OnFailure
+
+  - it: "does not render replicas (Job has no replicas)"
+    set:
+      jobs:
+        migrate:
+          containers:
+            migrate:
+              image:
+                repository: my-app
+                tag: "1.0"
+    asserts:
+      - notExists:
+          path: spec.replicas
+
+  # ---------------------------------------------------------------------------
+  # Default merging
+  # ---------------------------------------------------------------------------
+  - it: "merges defaultPod into Job"
+    set:
+      defaultPod:
+        serviceAccountName: default-sa
+      jobs:
+        migrate:
+          containers:
+            migrate:
+              image:
+                repository: my-app
+                tag: "1.0"
+    asserts:
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: default-sa
+
+  - it: "merges defaultContainer into Job containers"
+    set:
+      defaultContainer:
+        resources:
+          requests:
+            cpu: 100m
+      jobs:
+        migrate:
+          containers:
+            migrate:
+              image:
+                repository: my-app
+                tag: "1.0"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: 100m

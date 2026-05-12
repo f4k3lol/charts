@@ -1,0 +1,247 @@
+suite: service
+templates:
+  - service.yaml
+
+tests:
+  # ---------------------------------------------------------------------------
+  # Basic rendering
+  # ---------------------------------------------------------------------------
+  - it: "renders a Service"
+    set:
+      services:
+        web:
+          ports:
+            - name: http
+              port: 80
+              targetPort: 8080
+    asserts:
+      - isKind:
+          of: Service
+      - hasDocuments:
+          count: 1
+
+  - it: "renders nothing when services is empty"
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "enabled: false skips rendering"
+    set:
+      services:
+        web:
+          enabled: false
+          ports:
+            - name: http
+              port: 80
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "renders multiple services"
+    set:
+      services:
+        web:
+          ports:
+            - name: http
+              port: 80
+        metrics:
+          ports:
+            - name: metrics
+              port: 9090
+    asserts:
+      - hasDocuments:
+          count: 2
+
+  # ---------------------------------------------------------------------------
+  # defaultService merging
+  # ---------------------------------------------------------------------------
+  - it: "merges defaultService"
+    set:
+      defaultService:
+        type: ClusterIP
+      services:
+        web:
+          ports:
+            - name: http
+              port: 80
+    asserts:
+      - equal:
+          path: spec.type
+          value: ClusterIP
+
+  - it: "service-level overrides defaultService"
+    set:
+      defaultService:
+        type: ClusterIP
+      services:
+        web:
+          type: NodePort
+          ports:
+            - name: http
+              port: 80
+    asserts:
+      - equal:
+          path: spec.type
+          value: NodePort
+
+  # ---------------------------------------------------------------------------
+  # Service fields
+  # ---------------------------------------------------------------------------
+  - it: "sets service type"
+    set:
+      services:
+        web:
+          type: LoadBalancer
+          ports:
+            - name: http
+              port: 80
+    asserts:
+      - equal:
+          path: spec.type
+          value: LoadBalancer
+
+  - it: "sets ClusterIP None for headless"
+    set:
+      services:
+        redis-headless:
+          clusterIP: None
+          ports:
+            - name: redis
+              port: 6379
+    asserts:
+      - equal:
+          path: spec.clusterIP
+          value: None
+
+  - it: "sets publishNotReadyAddresses"
+    set:
+      services:
+        redis-headless:
+          clusterIP: None
+          publishNotReadyAddresses: true
+          ports:
+            - name: redis
+              port: 6379
+    asserts:
+      - equal:
+          path: spec.publishNotReadyAddresses
+          value: true
+
+  - it: "sets service annotations"
+    set:
+      services:
+        web:
+          annotations:
+            prometheus.io/scrape: "true"
+          ports:
+            - name: http
+              port: 80
+    asserts:
+      - equal:
+          path: metadata.annotations["prometheus.io/scrape"]
+          value: "true"
+
+  - it: "sets ports with appProtocol"
+    set:
+      services:
+        web:
+          ports:
+            - name: http
+              port: 80
+              targetPort: 8080
+              appProtocol: http
+    asserts:
+      - equal:
+          path: spec.ports[0].appProtocol
+          value: http
+
+  - it: "sets NodePort"
+    set:
+      services:
+        web:
+          type: NodePort
+          ports:
+            - name: http
+              port: 80
+              nodePort: 30080
+    asserts:
+      - equal:
+          path: spec.ports[0].nodePort
+          value: 30080
+
+  - it: "sets ExternalName"
+    set:
+      services:
+        external:
+          type: ExternalName
+          externalName: db.example.com
+    asserts:
+      - equal:
+          path: spec.type
+          value: ExternalName
+      - equal:
+          path: spec.externalName
+          value: db.example.com
+
+  # ---------------------------------------------------------------------------
+  # Custom selector
+  # ---------------------------------------------------------------------------
+  - it: "uses auto-generated selector by default"
+    release:
+      name: my-release
+    set:
+      services:
+        web:
+          ports:
+            - name: http
+              port: 80
+    asserts:
+      - exists:
+          path: spec.selector["app.kubernetes.io/name"]
+      - exists:
+          path: spec.selector["app.kubernetes.io/instance"]
+
+  - it: "custom selector overrides auto-generated"
+    set:
+      services:
+        web:
+          selector:
+            app.kubernetes.io/component: backend
+          ports:
+            - name: http
+              port: 80
+    asserts:
+      - equal:
+          path: spec.selector["app.kubernetes.io/component"]
+          value: backend
+
+  # ---------------------------------------------------------------------------
+  # commonLabels / commonAnnotations
+  # ---------------------------------------------------------------------------
+  - it: "commonLabels appear on service"
+    set:
+      commonLabels:
+        team: backend
+      services:
+        web:
+          ports:
+            - name: http
+              port: 80
+    asserts:
+      - equal:
+          path: metadata.labels.team
+          value: backend
+
+  - it: "commonAnnotations appear on service"
+    set:
+      commonAnnotations:
+        owner: backend-team
+      services:
+        web:
+          ports:
+            - name: http
+              port: 80
+    asserts:
+      - equal:
+          path: metadata.annotations.owner
+          value: backend-team

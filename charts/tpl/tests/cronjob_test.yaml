@@ -1,0 +1,245 @@
+suite: cronjob
+templates:
+  - cronjob.yaml
+
+tests:
+  # ---------------------------------------------------------------------------
+  # Basic rendering
+  # ---------------------------------------------------------------------------
+  - it: "renders a CronJob"
+    set:
+      cronJobs:
+        backup:
+          schedule: "0 2 * * *"
+          containers:
+            backup:
+              image:
+                repository: postgres
+                tag: "16"
+    asserts:
+      - isKind:
+          of: CronJob
+      - equal:
+          path: spec.schedule
+          value: "0 2 * * *"
+
+  - it: "renders nothing when cronJobs is empty"
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "enabled: false skips rendering"
+    set:
+      cronJobs:
+        backup:
+          enabled: false
+          schedule: "0 2 * * *"
+          containers:
+            backup:
+              image:
+                repository: postgres
+                tag: "16"
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  # ---------------------------------------------------------------------------
+  # CronJob-specific fields
+  # ---------------------------------------------------------------------------
+  - it: "sets concurrencyPolicy"
+    set:
+      cronJobs:
+        backup:
+          schedule: "0 2 * * *"
+          concurrencyPolicy: Forbid
+          containers:
+            backup:
+              image:
+                repository: postgres
+                tag: "16"
+    asserts:
+      - equal:
+          path: spec.concurrencyPolicy
+          value: Forbid
+
+  - it: "sets history limits"
+    set:
+      cronJobs:
+        backup:
+          schedule: "0 2 * * *"
+          successfulJobsHistoryLimit: 3
+          failedJobsHistoryLimit: 5
+          containers:
+            backup:
+              image:
+                repository: postgres
+                tag: "16"
+    asserts:
+      - equal:
+          path: spec.successfulJobsHistoryLimit
+          value: 3
+      - equal:
+          path: spec.failedJobsHistoryLimit
+          value: 5
+
+  - it: "sets startingDeadlineSeconds"
+    set:
+      cronJobs:
+        backup:
+          schedule: "0 2 * * *"
+          startingDeadlineSeconds: 300
+          containers:
+            backup:
+              image:
+                repository: postgres
+                tag: "16"
+    asserts:
+      - equal:
+          path: spec.startingDeadlineSeconds
+          value: 300
+
+  - it: "sets suspend"
+    set:
+      cronJobs:
+        backup:
+          schedule: "0 2 * * *"
+          suspend: true
+          containers:
+            backup:
+              image:
+                repository: postgres
+                tag: "16"
+    asserts:
+      - equal:
+          path: spec.suspend
+          value: true
+
+  # ---------------------------------------------------------------------------
+  # Job template fields (nested under spec.jobTemplate.spec)
+  # ---------------------------------------------------------------------------
+  - it: "sets backoffLimit in job template"
+    set:
+      cronJobs:
+        backup:
+          schedule: "0 2 * * *"
+          backoffLimit: 2
+          containers:
+            backup:
+              image:
+                repository: postgres
+                tag: "16"
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.backoffLimit
+          value: 2
+
+  - it: "sets activeDeadlineSeconds in job template"
+    set:
+      cronJobs:
+        backup:
+          schedule: "0 2 * * *"
+          activeDeadlineSeconds: 3600
+          containers:
+            backup:
+              image:
+                repository: postgres
+                tag: "16"
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.activeDeadlineSeconds
+          value: 3600
+
+  - it: "sets ttlSecondsAfterFinished in job template"
+    set:
+      cronJobs:
+        backup:
+          schedule: "0 2 * * *"
+          ttlSecondsAfterFinished: 86400
+          containers:
+            backup:
+              image:
+                repository: postgres
+                tag: "16"
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.ttlSecondsAfterFinished
+          value: 86400
+
+  - it: "sets restartPolicy in pod template"
+    set:
+      cronJobs:
+        backup:
+          schedule: "0 2 * * *"
+          restartPolicy: OnFailure
+          containers:
+            backup:
+              image:
+                repository: postgres
+                tag: "16"
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.restartPolicy
+          value: OnFailure
+
+  - it: "sets volumes in pod template"
+    set:
+      cronJobs:
+        backup:
+          schedule: "0 2 * * *"
+          volumes:
+            - name: backup
+              persistentVolumeClaim:
+                claimName: backup-pvc
+          containers:
+            backup:
+              image:
+                repository: postgres
+                tag: "16"
+              volumeMounts:
+                - name: backup
+                  mountPath: /backup
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.volumes[0].name
+          value: backup
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].volumeMounts[0].mountPath
+          value: /backup
+
+  # ---------------------------------------------------------------------------
+  # Default merging
+  # ---------------------------------------------------------------------------
+  - it: "merges defaultPod into CronJob pod spec"
+    set:
+      defaultPod:
+        nodeSelector:
+          kubernetes.io/os: linux
+      cronJobs:
+        backup:
+          schedule: "0 2 * * *"
+          containers:
+            backup:
+              image:
+                repository: postgres
+                tag: "16"
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.nodeSelector["kubernetes.io/os"]
+          value: linux
+
+  - it: "merges defaultContainer into CronJob containers"
+    set:
+      defaultContainer:
+        imagePullPolicy: Always
+      cronJobs:
+        backup:
+          schedule: "0 2 * * *"
+          containers:
+            backup:
+              image:
+                repository: postgres
+                tag: "16"
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].imagePullPolicy
+          value: Always

@@ -1,0 +1,318 @@
+suite: gateway API
+templates:
+  - httproute.yaml
+  - grpcroute.yaml
+  - tcproute.yaml
+  - tlsroute.yaml
+  - gateway.yaml
+
+tests:
+  # ---------------------------------------------------------------------------
+  # HTTPRoute
+  # ---------------------------------------------------------------------------
+  - it: "renders an HTTPRoute"
+    template: httproute.yaml
+    set:
+      httpRoutes:
+        web:
+          parentRefs:
+            - name: main-gateway
+              namespace: infra
+          hostnames:
+            - app.example.com
+          rules:
+            - matches:
+                - path:
+                    type: PathPrefix
+                    value: /
+              backendRefs:
+                - name: web
+                  port: 80
+    asserts:
+      - isAPIVersion:
+          of: gateway.networking.k8s.io/v1
+      - isKind:
+          of: HTTPRoute
+      - equal:
+          path: spec.parentRefs[0].name
+          value: main-gateway
+      - equal:
+          path: spec.hostnames[0]
+          value: app.example.com
+
+  - it: "renders nothing when httpRoutes is empty"
+    template: httproute.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "enabled: false skips HTTPRoute"
+    template: httproute.yaml
+    set:
+      httpRoutes:
+        web:
+          enabled: false
+          parentRefs:
+            - name: gw
+          rules: []
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "merges defaultHttpRoute"
+    template: httproute.yaml
+    set:
+      defaultHttpRoute:
+        parentRefs:
+          - name: main-gateway
+            namespace: infra
+      httpRoutes:
+        web:
+          hostnames:
+            - app.example.com
+          rules:
+            - matches:
+                - path:
+                    type: PathPrefix
+                    value: /
+              backendRefs:
+                - name: web
+                  port: 80
+    asserts:
+      - equal:
+          path: spec.parentRefs[0].name
+          value: main-gateway
+
+  - it: "renders traffic splitting (canary)"
+    template: httproute.yaml
+    set:
+      httpRoutes:
+        canary:
+          parentRefs:
+            - name: main-gateway
+          hostnames:
+            - app.example.com
+          rules:
+            - matches:
+                - path:
+                    type: PathPrefix
+                    value: /
+              backendRefs:
+                - name: web
+                  port: 80
+                  weight: 90
+                - name: web-canary
+                  port: 80
+                  weight: 10
+    asserts:
+      - equal:
+          path: spec.rules[0].backendRefs[0].weight
+          value: 90
+      - equal:
+          path: spec.rules[0].backendRefs[1].weight
+          value: 10
+
+  # ---------------------------------------------------------------------------
+  # GRPCRoute
+  # ---------------------------------------------------------------------------
+  - it: "renders a GRPCRoute"
+    template: grpcroute.yaml
+    set:
+      grpcRoutes:
+        grpc:
+          parentRefs:
+            - name: main-gateway
+          hostnames:
+            - grpc.example.com
+          rules:
+            - matches:
+                - method:
+                    service: my.Service
+                    method: GetItem
+              backendRefs:
+                - name: grpc-svc
+                  port: 9090
+    asserts:
+      - isAPIVersion:
+          of: gateway.networking.k8s.io/v1
+      - isKind:
+          of: GRPCRoute
+
+  - it: "renders nothing when grpcRoutes is empty"
+    template: grpcroute.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "merges defaultGrpcRoute"
+    template: grpcroute.yaml
+    set:
+      defaultGrpcRoute:
+        parentRefs:
+          - name: main-gateway
+            namespace: infra
+      grpcRoutes:
+        grpc:
+          hostnames:
+            - grpc.example.com
+          rules:
+            - backendRefs:
+                - name: grpc-svc
+                  port: 9090
+    asserts:
+      - equal:
+          path: spec.parentRefs[0].name
+          value: main-gateway
+
+  # ---------------------------------------------------------------------------
+  # TCPRoute
+  # ---------------------------------------------------------------------------
+  - it: "renders a TCPRoute"
+    template: tcproute.yaml
+    set:
+      tcpRoutes:
+        redis:
+          parentRefs:
+            - name: main-gateway
+              sectionName: redis-tcp
+          rules:
+            - backendRefs:
+                - name: redis
+                  port: 6379
+    asserts:
+      - isAPIVersion:
+          of: gateway.networking.k8s.io/v1alpha2
+      - isKind:
+          of: TCPRoute
+
+  - it: "renders nothing when tcpRoutes is empty"
+    template: tcproute.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "merges defaultTcpRoute"
+    template: tcproute.yaml
+    set:
+      defaultTcpRoute:
+        parentRefs:
+          - name: main-gateway
+            namespace: infra
+      tcpRoutes:
+        redis:
+          rules:
+            - backendRefs:
+                - name: redis
+                  port: 6379
+    asserts:
+      - equal:
+          path: spec.parentRefs[0].name
+          value: main-gateway
+
+  # ---------------------------------------------------------------------------
+  # TLSRoute
+  # ---------------------------------------------------------------------------
+  - it: "renders a TLSRoute"
+    template: tlsroute.yaml
+    set:
+      tlsRoutes:
+        passthrough:
+          parentRefs:
+            - name: main-gateway
+              sectionName: tls-passthrough
+          hostnames:
+            - secure.example.com
+          rules:
+            - backendRefs:
+                - name: web
+                  port: 8443
+    asserts:
+      - isAPIVersion:
+          of: gateway.networking.k8s.io/v1alpha2
+      - isKind:
+          of: TLSRoute
+
+  - it: "renders nothing when tlsRoutes is empty"
+    template: tlsroute.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "merges defaultTlsRoute"
+    template: tlsroute.yaml
+    set:
+      defaultTlsRoute:
+        parentRefs:
+          - name: main-gateway
+            namespace: infra
+      tlsRoutes:
+        passthrough:
+          hostnames:
+            - secure.example.com
+          rules:
+            - backendRefs:
+                - name: web
+                  port: 8443
+    asserts:
+      - equal:
+          path: spec.parentRefs[0].name
+          value: main-gateway
+
+  # ---------------------------------------------------------------------------
+  # Gateway
+  # ---------------------------------------------------------------------------
+  - it: "renders a Gateway"
+    template: gateway.yaml
+    set:
+      gateways:
+        main:
+          gatewayClassName: istio
+          listeners:
+            - name: http
+              protocol: HTTP
+              port: 80
+              allowedRoutes:
+                namespaces:
+                  from: Same
+    asserts:
+      - isAPIVersion:
+          of: gateway.networking.k8s.io/v1
+      - isKind:
+          of: Gateway
+      - equal:
+          path: spec.gatewayClassName
+          value: istio
+
+  - it: "renders nothing when gateways is empty"
+    template: gateway.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "renders multiple listeners"
+    template: gateway.yaml
+    set:
+      gateways:
+        main:
+          gatewayClassName: istio
+          listeners:
+            - name: http
+              protocol: HTTP
+              port: 80
+            - name: https
+              protocol: HTTPS
+              port: 443
+              tls:
+                mode: Terminate
+                certificateRefs:
+                  - name: my-tls
+    asserts:
+      - equal:
+          path: spec.listeners[0].name
+          value: http
+      - equal:
+          path: spec.listeners[1].name
+          value: https
+      - equal:
+          path: spec.listeners[1].tls.mode
+          value: Terminate

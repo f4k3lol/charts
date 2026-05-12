@@ -1,29 +1,22 @@
-{{- $mergedValues := mustMergeOverwrite (dict) .Values.global .Values }}
-{{- if and (eq $mergedValues.kind "Deployment") $mergedValues.autoscaling.enabled }}
+{{- range $name, $spec := .Values.deployments }}
+{{- if and (not (and (hasKey $spec "enabled") (not $spec.enabled))) (($spec.autoscaling | default dict).enabled) }}
 ---
-  {{- if .Capabilities.APIVersions.Has "autoscaling/v2" }}
 apiVersion: autoscaling/v2
-  {{- else }}
-apiVersion: autoscaling/v2beta2
-  {{- end }}
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "tpl.fullname" . }}
-  labels:
-  {{- include "tpl.labels" . | nindent 4 }}
+  {{- include "tpl.metadata" (dict "context" $ "name" $name "labels" nil "annotations" nil) | nindent 2 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "tpl.fullname" . }}
-  minReplicas: {{ $mergedValues.autoscaling.minReplicas }}
-  maxReplicas: {{ $mergedValues.autoscaling.maxReplicas }}
-  {{- with $mergedValues.autoscaling.behavior }}
-  behavior:
-    {{- toYaml . | nindent 4 }}
+    name: {{ include "tpl.resourceName" (dict "context" $ "name" $name) }}
+  minReplicas: {{ $spec.autoscaling.minReplicas | default 1 }}
+  maxReplicas: {{ $spec.autoscaling.maxReplicas | default 10 }}
+  {{- with $spec.autoscaling.metrics }}
+  metrics: {{ toYaml . | nindent 4 }}
   {{- end }}
-  {{- with $mergedValues.autoscaling.metrics }}
-  metrics:
-    {{- toYaml . | nindent 4 }}
+  {{- with $spec.autoscaling.behavior }}
+  behavior: {{ toYaml . | nindent 4 }}
   {{- end }}
+{{- end }}
 {{- end }}

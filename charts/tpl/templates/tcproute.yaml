@@ -1,0 +1,23 @@
+{{- range $name, $spec := .Values.tcpRoutes }}
+{{- if not (and (hasKey $spec "enabled") (not $spec.enabled)) }}
+{{- $defaults := $.Values.defaultTcpRoute | default dict }}
+{{- $merged := fromYaml (include "tpl.mergeDeep" (dict "base" $defaults "override" $spec)) }}
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TCPRoute
+metadata:
+  {{- include "tpl.metadata" (dict "context" $ "name" $name "labels" $merged.labels "annotations" $merged.annotations) | nindent 2 }}
+spec:
+  {{- with $merged.parentRefs }}
+  parentRefs: {{ toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with $merged.rules }}
+  rules:
+    {{- range . }}
+    - {{- with .backendRefs }}
+      backendRefs: {{ toYaml . | nindent 8 }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}

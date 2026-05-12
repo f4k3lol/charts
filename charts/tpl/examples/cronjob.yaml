@@ -1,0 +1,50 @@
+# CronJob — daily database backup
+cronJobs:
+  db-backup:
+    schedule: "0 2 * * *"
+    concurrencyPolicy: Forbid
+    successfulJobsHistoryLimit: 3
+    failedJobsHistoryLimit: 5
+    backoffLimit: 2
+    activeDeadlineSeconds: 3600
+    ttlSecondsAfterFinished: 86400
+    restartPolicy: OnFailure
+    volumes:
+      - name: backup
+        persistentVolumeClaim:
+          claimName: backup-pvc
+    containers:
+      backup:
+        image:
+          repository: postgres
+          tag: "16-alpine"
+        command: ["sh", "-c"]
+        args:
+          - pg_dump $DB_URL | gzip > /backup/db-$(date +%Y%m%d).sql.gz
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            memory: 512Mi
+        env:
+          DB_URL:
+            from: secret
+            name: app-secrets
+            key: db-url
+        volumeMounts:
+          - name: backup
+            mountPath: /backup
+
+secrets:
+  app-secrets:
+    stringData:
+      db-url: "postgres://app:changeme@postgres:5432/mydb"
+
+persistentVolumeClaims:
+  backup-pvc:
+    storageClassName: standard
+    accessModes: ["ReadWriteOnce"]
+    resources:
+      requests:
+        storage: 50Gi

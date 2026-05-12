@@ -1,0 +1,164 @@
+suite: _helpers.tpl
+templates:
+  # We test helpers indirectly via a real template.
+  # Deployment is a good vehicle — it uses name, labels, selectorLabels, image.
+  - deployment.yaml
+
+tests:
+  # ---------------------------------------------------------------------------
+  # tpl.name
+  # ---------------------------------------------------------------------------
+  - it: "tpl.name defaults to chart name"
+    release:
+      name: my-release
+    set:
+      deployments.app.containers.app.image.repository: nginx
+    asserts:
+      - isKind:
+          of: Deployment
+      - matchRegex:
+          path: metadata.name
+          pattern: ".*-app$"
+
+  - it: "tpl.name respects nameOverride"
+    release:
+      name: my-release
+    set:
+      nameOverride: custom-name
+      deployments.app.containers.app.image.repository: nginx
+    asserts:
+      - equal:
+          path: metadata.labels["app.kubernetes.io/name"]
+          value: custom-name
+
+  # ---------------------------------------------------------------------------
+  # tpl.fullname
+  # ---------------------------------------------------------------------------
+  - it: "tpl.fullname respects fullnameOverride"
+    set:
+      fullnameOverride: my-override
+      deployments.app.containers.app.image.repository: nginx
+    asserts:
+      - equal:
+          path: metadata.name
+          value: my-override-app
+
+  # ---------------------------------------------------------------------------
+  # tpl.labels — standard labels
+  # ---------------------------------------------------------------------------
+  - it: "renders standard Kubernetes labels"
+    release:
+      name: my-release
+    chart:
+      version: 1.0.0
+      appVersion: 2.0.0
+    set:
+      deployments.app.containers.app.image.repository: nginx
+    asserts:
+      - exists:
+          path: metadata.labels["app.kubernetes.io/name"]
+      - exists:
+          path: metadata.labels["app.kubernetes.io/instance"]
+      - exists:
+          path: metadata.labels["app.kubernetes.io/version"]
+      - exists:
+          path: metadata.labels["app.kubernetes.io/managed-by"]
+      - equal:
+          path: metadata.labels["app.kubernetes.io/instance"]
+          value: my-release
+
+  # ---------------------------------------------------------------------------
+  # commonLabels
+  # ---------------------------------------------------------------------------
+  - it: "commonLabels appear on resource metadata"
+    set:
+      commonLabels:
+        team: backend
+        cost-center: "12345"
+      deployments.app.containers.app.image.repository: nginx
+    asserts:
+      - equal:
+          path: metadata.labels.team
+          value: backend
+      - equal:
+          path: metadata.labels["cost-center"]
+          value: "12345"
+
+  - it: "commonLabels appear on pod template"
+    set:
+      commonLabels:
+        team: backend
+      deployments.app.containers.app.image.repository: nginx
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels.team
+          value: backend
+
+  # ---------------------------------------------------------------------------
+  # commonAnnotations
+  # ---------------------------------------------------------------------------
+  - it: "commonAnnotations appear on resource metadata"
+    set:
+      commonAnnotations:
+        owner: team-backend@example.com
+      deployments.app.containers.app.image.repository: nginx
+    asserts:
+      - equal:
+          path: metadata.annotations.owner
+          value: team-backend@example.com
+
+  # ---------------------------------------------------------------------------
+  # tpl.image — registry/repository:tag
+  # ---------------------------------------------------------------------------
+  - it: "image renders as registry/repository:tag"
+    set:
+      deployments.app.containers.app.image:
+        registry: ghcr.io
+        repository: myorg/myapp
+        tag: "1.2.3"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "ghcr.io/myorg/myapp:1.2.3"
+
+  - it: "image renders without registry if not set"
+    set:
+      deployments.app.containers.app.image:
+        repository: nginx
+        tag: "latest"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "nginx:latest"
+
+  - it: "image digest takes precedence over tag"
+    set:
+      deployments.app.containers.app.image:
+        repository: myapp
+        tag: "1.0.0"
+        digest: "sha256:abcdef1234567890"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "myapp@sha256:abcdef1234567890"
+
+  - it: "imageString bypasses registry/repository/tag"
+    set:
+      deployments.app.containers.app.imageString: "custom.io/special:v1"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "custom.io/special:v1"
+
+  - it: "image inherits registry from defaultContainer"
+    set:
+      defaultContainer:
+        image:
+          registry: registry.internal.com
+      deployments.app.containers.app.image:
+        repository: myapp
+        tag: "1.0.0"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "registry.internal.com/myapp:1.0.0"

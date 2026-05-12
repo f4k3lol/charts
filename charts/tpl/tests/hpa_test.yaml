@@ -1,0 +1,116 @@
+suite: hpa
+templates:
+  - hpa.yaml
+
+tests:
+  - it: "renders an HPA when autoscaling is enabled"
+    set:
+      deployments:
+        web:
+          autoscaling:
+            enabled: true
+            minReplicas: 2
+            maxReplicas: 10
+            metrics:
+              - type: Resource
+                resource:
+                  name: cpu
+                  target:
+                    type: Utilization
+                    averageUtilization: 75
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+    asserts:
+      - isKind:
+          of: HorizontalPodAutoscaler
+      - equal:
+          path: spec.minReplicas
+          value: 2
+      - equal:
+          path: spec.maxReplicas
+          value: 10
+
+  - it: "renders nothing when no deployments have autoscaling"
+    set:
+      deployments:
+        web:
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "renders nothing when autoscaling.enabled is false"
+    set:
+      deployments:
+        web:
+          autoscaling:
+            enabled: false
+            minReplicas: 2
+            maxReplicas: 10
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "sets behavior"
+    set:
+      deployments:
+        web:
+          autoscaling:
+            enabled: true
+            minReplicas: 1
+            maxReplicas: 10
+            behavior:
+              scaleDown:
+                stabilizationWindowSeconds: 300
+            metrics:
+              - type: Resource
+                resource:
+                  name: cpu
+                  target:
+                    type: Utilization
+                    averageUtilization: 75
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+    asserts:
+      - equal:
+          path: spec.behavior.scaleDown.stabilizationWindowSeconds
+          value: 300
+
+  - it: "references correct deployment"
+    release:
+      name: my-release
+    set:
+      deployments:
+        web:
+          autoscaling:
+            enabled: true
+            minReplicas: 1
+            maxReplicas: 5
+            metrics: []
+          containers:
+            web:
+              image:
+                repository: nginx
+                tag: "1.25"
+    asserts:
+      - equal:
+          path: spec.scaleTargetRef.kind
+          value: Deployment
+      - matchRegex:
+          path: spec.scaleTargetRef.name
+          pattern: ".*-web$"

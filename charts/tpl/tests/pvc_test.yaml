@@ -1,0 +1,66 @@
+suite: persistentVolumeClaim
+templates:
+  - pvc.yaml
+
+tests:
+  - it: "renders a PVC"
+    set:
+      persistentVolumeClaims:
+        data:
+          storageClassName: standard
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+    asserts:
+      - isKind:
+          of: PersistentVolumeClaim
+      - equal:
+          path: spec.storageClassName
+          value: standard
+      - equal:
+          path: spec.accessModes[0]
+          value: ReadWriteOnce
+      - equal:
+          path: spec.resources.requests.storage
+          value: 10Gi
+
+  - it: "renders nothing when persistentVolumeClaims is empty"
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "sets labels and annotations"
+    set:
+      persistentVolumeClaims:
+        data:
+          labels:
+            type: storage
+          annotations:
+            description: "data volume"
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+    asserts:
+      - equal:
+          path: metadata.labels.type
+          value: storage
+      - equal:
+          path: metadata.annotations.description
+          value: "data volume"
+
+  - it: "commonLabels appear on PVC"
+    set:
+      commonLabels:
+        team: backend
+      persistentVolumeClaims:
+        data:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+    asserts:
+      - equal:
+          path: metadata.labels.team
+          value: backend

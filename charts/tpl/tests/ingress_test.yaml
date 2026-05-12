@@ -1,0 +1,222 @@
+suite: ingress
+templates:
+  - ingress.yaml
+
+tests:
+  # ---------------------------------------------------------------------------
+  # Basic rendering
+  # ---------------------------------------------------------------------------
+  - it: "renders an Ingress"
+    set:
+      ingresses:
+        web:
+          hosts:
+            - app.example.com
+          paths:
+            - path: /
+              type: Prefix
+          serviceName: web
+          servicePortNumber: 80
+    asserts:
+      - isKind:
+          of: Ingress
+      - hasDocuments:
+          count: 1
+
+  - it: "renders nothing when ingresses is empty"
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "enabled: false skips rendering"
+    set:
+      ingresses:
+        web:
+          enabled: false
+          hosts:
+            - app.example.com
+          paths:
+            - path: /
+          serviceName: web
+          servicePortNumber: 80
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  # ---------------------------------------------------------------------------
+  # defaultIngress merging
+  # ---------------------------------------------------------------------------
+  - it: "merges defaultIngress"
+    set:
+      defaultIngress:
+        className: nginx
+        annotations:
+          nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      ingresses:
+        web:
+          hosts:
+            - app.example.com
+          paths:
+            - path: /
+          serviceName: web
+          servicePortNumber: 80
+    asserts:
+      - equal:
+          path: spec.ingressClassName
+          value: nginx
+      - equal:
+          path: metadata.annotations["nginx.ingress.kubernetes.io/ssl-redirect"]
+          value: "true"
+
+  - it: "ingress-level overrides defaultIngress"
+    set:
+      defaultIngress:
+        className: nginx
+      ingresses:
+        web:
+          className: traefik
+          hosts:
+            - app.example.com
+          paths:
+            - path: /
+          serviceName: web
+          servicePortNumber: 80
+    asserts:
+      - equal:
+          path: spec.ingressClassName
+          value: traefik
+
+  # ---------------------------------------------------------------------------
+  # Ingress fields
+  # ---------------------------------------------------------------------------
+  - it: "sets TLS"
+    set:
+      ingresses:
+        web:
+          className: nginx
+          tls:
+            - secretName: my-tls
+              hosts:
+                - app.example.com
+          hosts:
+            - app.example.com
+          paths:
+            - path: /
+              type: Prefix
+          serviceName: web
+          servicePortNumber: 80
+    asserts:
+      - equal:
+          path: spec.tls[0].secretName
+          value: my-tls
+      - equal:
+          path: spec.tls[0].hosts[0]
+          value: app.example.com
+
+  - it: "sets multiple paths"
+    set:
+      ingresses:
+        web:
+          hosts:
+            - app.example.com
+          paths:
+            - path: /
+              type: Prefix
+            - path: /api
+              type: Prefix
+          serviceName: web
+          servicePortNumber: 80
+    asserts:
+      - equal:
+          path: spec.rules[0].http.paths[0].path
+          value: /
+      - equal:
+          path: spec.rules[0].http.paths[1].path
+          value: /api
+
+  - it: "sets service backend with port number"
+    set:
+      ingresses:
+        web:
+          hosts:
+            - app.example.com
+          paths:
+            - path: /
+          serviceName: web
+          servicePortNumber: 80
+    asserts:
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.name
+          value: web
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.port.number
+          value: 80
+
+  - it: "sets service backend with port name"
+    set:
+      ingresses:
+        web:
+          hosts:
+            - app.example.com
+          paths:
+            - path: /
+          serviceName: web
+          servicePortName: http
+    asserts:
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.port.name
+          value: http
+
+  - it: "sets per-ingress labels"
+    set:
+      ingresses:
+        web:
+          labels:
+            external-dns: "true"
+          hosts:
+            - app.example.com
+          paths:
+            - path: /
+          serviceName: web
+          servicePortNumber: 80
+    asserts:
+      - equal:
+          path: metadata.labels["external-dns"]
+          value: "true"
+
+  - it: "sets per-ingress annotations"
+    set:
+      ingresses:
+        web:
+          annotations:
+            nginx.ingress.kubernetes.io/rate-limit: "100"
+          hosts:
+            - app.example.com
+          paths:
+            - path: /
+          serviceName: web
+          servicePortNumber: 80
+    asserts:
+      - equal:
+          path: metadata.annotations["nginx.ingress.kubernetes.io/rate-limit"]
+          value: "100"
+
+  # ---------------------------------------------------------------------------
+  # commonLabels / commonAnnotations
+  # ---------------------------------------------------------------------------
+  - it: "commonLabels appear on ingress"
+    set:
+      commonLabels:
+        team: backend
+      ingresses:
+        web:
+          hosts:
+            - app.example.com
+          paths:
+            - path: /
+          serviceName: web
+          servicePortNumber: 80
+    asserts:
+      - equal:
+          path: metadata.labels.team
+          value: backend

@@ -1,0 +1,129 @@
+suite: monitoring
+templates:
+  - servicemonitor.yaml
+  - podmonitor.yaml
+
+tests:
+  # ---------------------------------------------------------------------------
+  # ServiceMonitor
+  # ---------------------------------------------------------------------------
+  - it: "renders a ServiceMonitor"
+    template: servicemonitor.yaml
+    set:
+      serviceMonitors:
+        app-metrics:
+          labels:
+            release: prometheus
+          selector:
+            matchLabels:
+              app: web
+          endpoints:
+            - port: metrics
+              interval: 30s
+              path: /metrics
+    asserts:
+      - isAPIVersion:
+          of: monitoring.coreos.com/v1
+      - isKind:
+          of: ServiceMonitor
+      - equal:
+          path: metadata.labels.release
+          value: prometheus
+      - equal:
+          path: spec.selector.matchLabels.app
+          value: web
+      - equal:
+          path: spec.endpoints[0].port
+          value: metrics
+      - equal:
+          path: spec.endpoints[0].interval
+          value: 30s
+
+  - it: "renders nothing when serviceMonitors is empty"
+    template: servicemonitor.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "sets namespaceSelector"
+    template: servicemonitor.yaml
+    set:
+      serviceMonitors:
+        app-metrics:
+          selector:
+            matchLabels:
+              app: web
+          endpoints:
+            - port: metrics
+          namespaceSelector:
+            matchNames: [my-namespace]
+    asserts:
+      - equal:
+          path: spec.namespaceSelector.matchNames[0]
+          value: my-namespace
+
+  - it: "commonLabels appear on ServiceMonitor"
+    template: servicemonitor.yaml
+    set:
+      commonLabels:
+        team: backend
+      serviceMonitors:
+        app-metrics:
+          selector:
+            matchLabels:
+              app: web
+          endpoints:
+            - port: metrics
+    asserts:
+      - equal:
+          path: metadata.labels.team
+          value: backend
+
+  # ---------------------------------------------------------------------------
+  # PodMonitor
+  # ---------------------------------------------------------------------------
+  - it: "renders a PodMonitor"
+    template: podmonitor.yaml
+    set:
+      podMonitors:
+        node-exporter:
+          labels:
+            release: prometheus
+          selector:
+            matchLabels:
+              app: exporter
+          podMetricsEndpoints:
+            - port: metrics
+              interval: 30s
+              path: /metrics
+    asserts:
+      - isAPIVersion:
+          of: monitoring.coreos.com/v1
+      - isKind:
+          of: PodMonitor
+      - equal:
+          path: spec.podMetricsEndpoints[0].port
+          value: metrics
+
+  - it: "renders nothing when podMonitors is empty"
+    template: podmonitor.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "commonLabels appear on PodMonitor"
+    template: podmonitor.yaml
+    set:
+      commonLabels:
+        team: platform
+      podMonitors:
+        exporter:
+          selector:
+            matchLabels:
+              app: exporter
+          podMetricsEndpoints:
+            - port: metrics
+    asserts:
+      - equal:
+          path: metadata.labels.team
+          value: platform

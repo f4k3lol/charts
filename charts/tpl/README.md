@@ -1,50 +1,127 @@
 # tpl
 
-Chart for templating kubernetes resources using values. Can be used as single dependency, as multiple dependencies, as is. See examples for use cases
-## Values mergings process
-1. Values merged using function mustMergreOverride
-2. `.Values.global` merged into `.Values` resulting into `$mergedValues`
-3. `$mergedValues.defaultContainer` merged into each container `$mergedValues.containers.x`
-4. `$mergedValues.defaultService` merged into each service `$mergedValues.services.x`
-5. `$mergedValues.defaultIngress` merged into each ingress `$mergedValues.services.x.ingresses.y`
-6. `$mergedValues.defaultVolumeClaimTemplate` merged into each volumeClaimTemplate `$mergedValues.volumeClaimTemplates[x]`
-![Values merging process](values-merge.excalidraw.png)
+Generic chart for templating Kubernetes resources from values. Supports Deployment/StatefulSet, Services, Ingresses, ConfigMaps, Secrets, HPA, and raw extra manifests. Designed for use as a single chart, multiple dependencies, or as-is.
+
+## Usage modes
+
+1. **Standalone** — install directly with your `values.yaml`
+2. **Single dependency** — add as a dependency in another chart's `Chart.yaml`
+3. **Multiple dependencies** — use as multiple aliased dependencies with `nameOverride` for unique selector labels
+
+## Values merge order
+
+All merges use `deepCopy` + `mustMergeOverwrite` to prevent cross-resource bleed:
+
+| Priority | Default key | Merged into |
+|----------|------------|-------------|
+| 1 | `global` | Passed to subcharts (lowest priority) |
+| 2 | `defaultPod` | Every workload's pod spec |
+| 3 | `defaultContainer` | Every container (including initContainers) |
+| 4 | `defaultService` | Every service |
+| 5 | `defaultIngress` | Every ingress (top-level and nested) |
+| 6 | `defaultHttpRoute` | Every HTTPRoute |
+| 7 | `defaultGrpcRoute` | Every GRPCRoute |
+| 8 | `defaultTcpRoute` | Every TCPRoute |
+| 9 | `defaultTlsRoute` | Every TLSRoute |
+| 10 | `defaultVolumeClaimTemplate` | Every VCT (StatefulSet) |
+
+Resource-level values always win: `global` < `default*` < resource-level.
+
+## Resources generated
+
+| Values key | K8s resource | Notes |
+|---|---|---|
+| `deployments` | Deployment | With optional HPA |
+| `statefulSets` | StatefulSet | With VCTs |
+| `daemonSets` | DaemonSet | |
+| `jobs` | Job | |
+| `cronJobs` | CronJob | |
+| `services` | Service | Supports nested ingresses/httpRoutes |
+| `ingresses` | Ingress | Top-level or nested under services |
+| `httpRoutes` | HTTPRoute | Gateway API, top-level or nested |
+| `grpcRoutes` | GRPCRoute | Gateway API |
+| `tcpRoutes` | TCPRoute | Gateway API |
+| `tlsRoutes` | TLSRoute | Gateway API |
+| `gateways` | Gateway | Gateway API |
+| `networkPolicies` | NetworkPolicy | |
+| `configMaps` | ConfigMap | |
+| `secrets` | Secret | Opaque, TLS, dockerconfigjson |
+| `persistentVolumeClaims` | PersistentVolumeClaim | |
+| `serviceAccounts` | ServiceAccount | |
+| `podDisruptionBudgets` | PodDisruptionBudget | |
+| `serviceMonitors` | ServiceMonitor | Prometheus Operator CRD |
+| `podMonitors` | PodMonitor | Prometheus Operator CRD |
+| `extraManifests` | Any | Native YAML objects |
+
+## Quick start
+
+```yaml
+deployments:
+  app:
+    replicas: 1
+    containers:
+      app:
+        image:
+          repository: nginx
+          tag: "1.27"
+        ports:
+          - name: http
+            containerPort: 80
+            protocol: TCP
+
+services:
+  app:
+    ports:
+      - name: http
+        port: 80
+```
+
+See [examples/](examples/) for full usage patterns:
+- [minimal.yaml](examples/minimal.yaml) — simplest deployment + service
+- [deployment.yaml](examples/deployment.yaml) — HPA, ingress, httpRoute, config
+- [statefulset.yaml](examples/statefulset.yaml) — Redis cluster with VCTs
+- [daemonset.yaml](examples/daemonset.yaml) — Fluent Bit log collector
+- [job.yaml](examples/job.yaml) — database migration
+- [cronjob.yaml](examples/cronjob.yaml) — scheduled backup with PVC
+- [defaults-override.yaml](examples/defaults-override.yaml) — merge priority demo
+- [full-reference.yaml](examples/full-reference.yaml) — every possible value documented
+
 ## Values
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| configMaps | object | `{}` | k8s configMaps. Use this to define configMaps |
-| containers | object | `{}` | k8s containers. Use this to define containers |
-| defaultContainer | object | `{}` | k8s container defaults. merged into each container |
-| defaultIngress | object | `{}` | k8s ingress defaults. merged into each ingress |
-| defaultService | object | `{}` | k8s service defaults. merged into each service |
-| defaultVolumeClaimTemplate | object | `{}` | k8s volumeClaimTemplate defaults. merged into each volumeClaimTemplate |
-| global.affinity | object | `{}` | k8s affinity |
-| global.autoscaling | object | `{"behavior":{},"enabled":false,"maxReplicas":20,"metrics":[],"minReplicas":1}` | k8s hpa settings |
-| global.defaultContainer | object | `{"args":null,"command":null,"configs":null,"env":null,"image":{"baseRepository":"","registry":"","repository":"","tag":""},"imagePullPolicy":"IfNotPresent","livenessProbe":null,"readinessProbe":null,"resources":null,"volumes":null}` | k8s container defaults. merged into each container |
-| global.defaultIngress | object | `{"annotations":{},"className":"nginx","defaultPathType":"ImplementationSpecific","hosts":[],"paths":[{"path":"/"}],"tls":[]}` | k8s ingress defaults. merged into each ingress |
-| global.defaultService | object | `{"annotations":{},"ports":[]}` | k8s service defaults. merged into each service |
-| global.defaultVolumeClaimTemplate | object | `{"spec":{"accessModes":["ReadWriteOnce"]}}` | k8s volumeClaimTemplate defaults. merged into each volumeClaimTemplate |
-| global.enableServiceLinks | bool | `false` | k8s enableServiceLinks |
-| global.extraManifests | list | `[]` | Raw k8s manifests, rendered as is |
-| global.fullnameOverride | string | `""` |  |
-| global.imagePullSecrets | list | `[]` | k8s imagePullSecrets |
-| global.kind | string | `"Deployment"` | can be StatefulSet or Deployment (default) |
-| global.minReadySeconds | int | `0` | k8s sts minReadySeconds |
-| global.nameOverride | string | `""` | chart nameOverride. should be used in multiple-dependency mode, for correct selectorLabels render |
-| global.nodeSelector | object | `{}` | k8s nodeSelector |
-| global.persistentVolumeClaimRetentionPolicy | object | `{}` | k8s sts persistentVolumeClaimRetentionPolicy |
-| global.podAnnotations | object | `{}` | k8s podAnnotations |
-| global.podManagementPolicy | string | `"OrderedReady"` | k8s sts podManagedPolicy |
-| global.podSecurityContext | object | `{}` | k8s podSecurityContext |
-| global.replicas | int | `1` | k8s replicas |
-| global.restartPolicy | string | `""` | k8s terminationGracePeriodSeconds |
-| global.serviceName | string | `""` | k8s sts serviceName |
-| global.strategy | object | `{"type":"RollingUpdate"}` | k8s strategy |
-| global.terminationGracePeriodSeconds | string | `nil` | k8s terminationGracePeriodSeconds |
-| global.tolerations | list | `[]` | k8s tolerations |
-| global.topologySpreadConstraints | list | `[]` | k8s topologySpreadConstraints |
-| global.updateStrategy | object | `{}` | k8s sts updateStrategy |
-| global.volumeClaimTemplates | list | `[]` | k8s sts volumeClaimTemplates |
-| secrets | object | `{}` | k8s secrets. Use this to define secrets |
-| services | object | `{}` | k8s services. Use this to define services |
+| commonAnnotations | object | `{}` |  |
+| commonLabels | object | `{}` |  |
+| configMaps | object | `{}` | Config / Storage |
+| cronJobs | object | `{}` |  |
+| daemonSets | object | `{}` |  |
+| defaultContainer | object | `{}` |  |
+| defaultGrpcRoute | object | `{}` |  |
+| defaultHttpRoute | object | `{}` |  |
+| defaultIngress.defaultPathType | string | `"ImplementationSpecific"` |  |
+| defaultPod | object | `{"enableServiceLinks":false}` | Defaults (merged into every resource of the corresponding type) |
+| defaultService | object | `{}` |  |
+| defaultTcpRoute | object | `{}` |  |
+| defaultTlsRoute | object | `{}` |  |
+| defaultVolumeClaimTemplate.spec.accessModes[0] | string | `"ReadWriteOnce"` |  |
+| deployments | object | `{}` | Workloads |
+| extraManifests | list | `[]` | Escape hatch |
+| fullnameOverride | string | `""` |  |
+| gateways | object | `{}` |  |
+| global | object | `{}` |  |
+| grpcRoutes | object | `{}` |  |
+| httpRoutes | object | `{}` |  |
+| ingresses | object | `{}` |  |
+| jobs | object | `{}` |  |
+| nameOverride | string | `""` | Chart identity |
+| networkPolicies | object | `{}` |  |
+| persistentVolumeClaims | object | `{}` |  |
+| podDisruptionBudgets | object | `{}` |  |
+| podMonitors | object | `{}` |  |
+| secrets | object | `{}` |  |
+| serviceAccounts | object | `{}` | Cluster resources |
+| serviceMonitors | object | `{}` | Monitoring |
+| services | object | `{}` | Networking |
+| statefulSets | object | `{}` |  |
+| tcpRoutes | object | `{}` |  |
+| tlsRoutes | object | `{}` |  |

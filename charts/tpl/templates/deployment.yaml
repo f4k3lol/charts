@@ -1,0 +1,21 @@
+{{- range $name, $spec := .Values.deployments }}
+{{- if not (and (hasKey $spec "enabled") (not $spec.enabled)) }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  {{- include "tpl.metadata" (dict "context" $ "name" $name "labels" $spec.labels "annotations" $spec.annotations) | nindent 2 }}
+spec:
+  {{- if not ($spec.autoscaling | default dict).enabled }}
+  replicas: {{ $spec.replicas | default 1 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "tpl.selectorLabels" $ | nindent 6 }}
+  {{- with $spec.strategy }}
+  strategy: {{ toYaml . | nindent 4 }}
+  {{- end }}
+  template:
+    {{- include "tpl.podSpec" (dict "workload" $spec "context" $) | nindent 4 }}
+{{- end }}
+{{- end }}

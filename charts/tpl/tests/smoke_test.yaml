@@ -1,0 +1,168 @@
+suite: smoke tests — example files render without errors
+# These tests validate that each example values file renders
+# all templates without errors. They don't assert specific output,
+# just that the rendering succeeds.
+
+values:
+  # Base: empty values (from values.yaml defaults)
+
+tests:
+  - it: "minimal example renders successfully"
+    values:
+      - ../examples/minimal.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+        template: deployment.yaml
+      - hasDocuments:
+          count: 1
+        template: service.yaml
+
+  - it: "deployment example renders successfully"
+    values:
+      - ../examples/deployment.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+        template: deployment.yaml
+      - hasDocuments:
+          count: 1
+        template: service.yaml
+      - hasDocuments:
+          count: 1
+        template: ingress.yaml
+      - hasDocuments:
+          count: 1
+        template: httproute.yaml
+      - hasDocuments:
+          count: 1
+        template: configmap.yaml
+      - hasDocuments:
+          count: 1
+        template: secret.yaml
+
+  - it: "statefulset example renders successfully"
+    values:
+      - ../examples/statefulset.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+        template: statefulset.yaml
+      - hasDocuments:
+          count: 1
+        template: service.yaml
+
+  - it: "daemonset example renders successfully"
+    values:
+      - ../examples/daemonset.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+        template: daemonset.yaml
+
+  - it: "job example renders successfully"
+    values:
+      - ../examples/job.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+        template: job.yaml
+      - hasDocuments:
+          count: 1
+        template: secret.yaml
+
+  - it: "cronjob example renders successfully"
+    values:
+      - ../examples/cronjob.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+        template: cronjob.yaml
+      - hasDocuments:
+          count: 1
+        template: secret.yaml
+      - hasDocuments:
+          count: 1
+        template: pvc.yaml
+
+  - it: "full-reference example renders successfully"
+    values:
+      - ../examples/full-reference.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+        template: deployment.yaml
+      - hasDocuments:
+          count: 1
+        template: statefulset.yaml
+      - hasDocuments:
+          count: 2
+        template: daemonset.yaml
+      - hasDocuments:
+          count: 2
+        template: job.yaml
+      - hasDocuments:
+          count: 2
+        template: cronjob.yaml
+      - hasDocuments:
+          count: 2
+        template: service.yaml
+      - hasDocuments:
+          count: 3
+        template: ingress.yaml
+      - hasDocuments:
+          count: 3
+        template: httproute.yaml
+      - hasDocuments:
+          count: 1
+        template: grpcroute.yaml
+      - hasDocuments:
+          count: 1
+        template: tcproute.yaml
+      - hasDocuments:
+          count: 1
+        template: tlsroute.yaml
+      - hasDocuments:
+          count: 1
+        template: gateway.yaml
+      - hasDocuments:
+          count: 2
+        template: networkpolicy.yaml
+      - hasDocuments:
+          count: 2
+        template: configmap.yaml
+      - hasDocuments:
+          count: 4
+        template: secret.yaml
+      - hasDocuments:
+          count: 1
+        template: pvc.yaml
+      - hasDocuments:
+          count: 2
+        template: serviceaccount.yaml
+      - hasDocuments:
+          count: 1
+        template: pdb.yaml
+      - hasDocuments:
+          count: 1
+        template: hpa.yaml
+      - hasDocuments:
+          count: 2
+        template: servicemonitor.yaml
+      - hasDocuments:
+          count: 1
+        template: podmonitor.yaml
+      - hasDocuments:
+          count: 2
+        template: extramanifests.yaml
+
+  - it: "defaults-override example renders successfully"
+    values:
+      - ../examples/defaults-override.yaml
+    asserts:
+      - hasDocuments:
+          count: 2
+        template: deployment.yaml
+      - hasDocuments:
+          count: 2
+        template: service.yaml

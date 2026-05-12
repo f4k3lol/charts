@@ -1,0 +1,30 @@
+# Job — database migration
+jobs:
+  db-migrate:
+    backoffLimit: 3
+    activeDeadlineSeconds: 600
+    ttlSecondsAfterFinished: 3600
+    restartPolicy: OnFailure
+    containers:
+      migrate:
+        image:
+          repository: my-app
+          tag: "1.0.0"
+        command: ["/app/migrate"]
+        args: ["--target", "latest"]
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            memory: 512Mi
+        env:
+          DB_URL:
+            from: secret
+            name: app-secrets
+            key: db-url
+
+secrets:
+  app-secrets:
+    stringData:
+      db-url: "postgres://app:changeme@postgres:5432/mydb"

@@ -1,0 +1,40 @@
+{{- range $name, $spec := .Values.statefulSets }}
+{{- if not (and (hasKey $spec "enabled") (not $spec.enabled)) }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  {{- include "tpl.metadata" (dict "context" $ "name" $name "labels" $spec.labels "annotations" $spec.annotations) | nindent 2 }}
+spec:
+  replicas: {{ $spec.replicas | default 1 }}
+  serviceName: {{ $spec.serviceName | default "" }}
+  selector:
+    matchLabels:
+      {{- include "tpl.selectorLabels" $ | nindent 6 }}
+  {{- with $spec.podManagementPolicy }}
+  podManagementPolicy: {{ . }}
+  {{- end }}
+  {{- with $spec.minReadySeconds }}
+  minReadySeconds: {{ . }}
+  {{- end }}
+  {{- with $spec.updateStrategy }}
+  updateStrategy: {{ toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with $spec.persistentVolumeClaimRetentionPolicy }}
+  persistentVolumeClaimRetentionPolicy: {{ toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with $spec.volumeClaimTemplates }}
+  volumeClaimTemplates:
+    {{- $vctDefaults := $.Values.defaultVolumeClaimTemplate | default dict }}
+    {{- range . }}
+    {{- $vctSpec := .spec | default dict }}
+    {{- $mergedSpec := fromYaml (include "tpl.mergeDeep" (dict "base" ($vctDefaults.spec | default dict) "override" $vctSpec)) }}
+    - metadata:
+        name: {{ .metadata.name }}
+      spec: {{ toYaml $mergedSpec | nindent 8 }}
+    {{- end }}
+  {{- end }}
+  template:
+    {{- include "tpl.podSpec" (dict "workload" $spec "context" $) | nindent 4 }}
+{{- end }}
+{{- end }}

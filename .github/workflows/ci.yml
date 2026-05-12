@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+    paths:
+      - "charts/**"
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Install helm-unittest plugin
+        run: helm plugin install https://github.com/helm-unittest/helm-unittest --verify=false
+
+      - name: Lint charts
+        run: |
+          for chart_dir in charts/*/; do
+            [ -f "${chart_dir}Chart.yaml" ] || continue
+            echo "==> Linting $chart_dir"
+            helm lint "$chart_dir"
+          done
+
+      - name: Run unit tests
+        run: |
+          for chart_dir in charts/*/; do
+            [ -d "${chart_dir}tests" ] || continue
+            echo "==> Testing $chart_dir"
+            helm unittest "$chart_dir"
+          done

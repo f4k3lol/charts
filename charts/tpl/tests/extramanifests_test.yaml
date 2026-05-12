@@ -1,0 +1,80 @@
+suite: extraManifests
+templates:
+  - extramanifests.yaml
+
+tests:
+  - it: "renders extra manifests as native YAML"
+    set:
+      extraManifests:
+        - apiVersion: rbac.authorization.k8s.io/v1
+          kind: Role
+          metadata:
+            name: my-role
+          rules:
+            - apiGroups: [""]
+              resources: ["configmaps"]
+              verbs: ["get", "list"]
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Role
+      - equal:
+          path: metadata.name
+          value: my-role
+
+  - it: "renders nothing when extraManifests is empty"
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "renders multiple extra manifests"
+    set:
+      extraManifests:
+        - apiVersion: rbac.authorization.k8s.io/v1
+          kind: Role
+          metadata:
+            name: my-role
+          rules: []
+        - apiVersion: rbac.authorization.k8s.io/v1
+          kind: RoleBinding
+          metadata:
+            name: my-binding
+          subjects: []
+          roleRef:
+            kind: Role
+            name: my-role
+            apiGroup: rbac.authorization.k8s.io
+    asserts:
+      - hasDocuments:
+          count: 2
+
+  - it: "applies commonLabels to extra manifests"
+    set:
+      commonLabels:
+        team: backend
+      extraManifests:
+        - apiVersion: rbac.authorization.k8s.io/v1
+          kind: Role
+          metadata:
+            name: my-role
+          rules: []
+    asserts:
+      - equal:
+          path: metadata.labels.team
+          value: backend
+
+  - it: "applies commonAnnotations to extra manifests"
+    set:
+      commonAnnotations:
+        owner: backend-team
+      extraManifests:
+        - apiVersion: rbac.authorization.k8s.io/v1
+          kind: Role
+          metadata:
+            name: my-role
+          rules: []
+    asserts:
+      - equal:
+          path: metadata.annotations.owner
+          value: backend-team
