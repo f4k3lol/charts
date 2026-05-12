@@ -2,6 +2,19 @@ apiVersion: v1
 entries:
   tpl:
   - apiVersion: v2
+    appVersion: 1.0.0
+    created: "2026-05-12T13:06:16.278413723Z"
+    description: Generic chart for templating Kubernetes resources from values. Supports
+      Deployment/StatefulSet, Services, Ingresses, ConfigMaps, Secrets, HPA, and raw
+      extra manifests. Designed for use as a single chart, multiple dependencies,
+      or as-is.
+    digest: 3dd691a59575bb51679cddd4e14fbea52326881267fcd9d9f0794ce2a39dd047
+    name: tpl
+    type: application
+    urls:
+    - https://github.com/f4k3lol/charts/releases/download/tpl-1.0.0/tpl-1.0.0.tgz
+    version: 1.0.0
+  - apiVersion: v2
     appVersion: 0.12.1
     created: "2024-10-15T06:13:58.371020393Z"
     description: Chart for templating kubernetes resources using values. Can be used
@@ -23,4 +36,4 @@ entries:
     urls:
     - https://github.com/f4k3lol/charts/releases/download/tpl-0.12.0/tpl-0.12.0.tgz
     version: 0.12.0
-generated: "2024-10-15T06:13:58.371031393Z"
+generated: "2026-05-12T13:06:16.278456263Z"
