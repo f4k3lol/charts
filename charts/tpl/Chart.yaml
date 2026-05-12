@@ -1,6 +1,9 @@
 apiVersion: v2
 name: tpl
-description: Generic chart for templating Kubernetes resources from values. Supports Deployment/StatefulSet, Services, Ingresses, ConfigMaps, Secrets, HPA, and raw extra manifests. Designed for use as a single chart, multiple dependencies, or as-is.
+description: Generic chart for templating Kubernetes resources from values.
+  Supports Deployment/StatefulSet, Services, Ingresses, ConfigMaps, Secrets,
+  HPA, and raw extra manifests. Designed for use as a single chart, multiple
+  dependencies, or as-is.
 type: application
 version: 1.0.0
 appVersion: 1.0.0
