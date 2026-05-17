@@ -6,7 +6,8 @@ kind: ConfigMap
 metadata:
   {{- include "tpl.metadata" (dict "context" $ "name" $name "labels" $spec.labels "annotations" $spec.annotations) | nindent 2 }}
 {{- with $spec.data }}
-data: {{ toYaml . | nindent 2 }}
+data:
+{{ tpl (toYaml .) $ | indent 2 }}
 {{- end }}
 {{- with $spec.binaryData }}
 binaryData: {{ toYaml . | nindent 2 }}

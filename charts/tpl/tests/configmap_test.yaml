@@ -88,3 +88,16 @@ tests:
       - equal:
           path: metadata.labels.team
           value: backend
+
+  - it: "tpl-evaluates template expressions in data"
+    set:
+      global:
+        endpoint: "https://api.example.com"
+      configMaps:
+        app-config:
+          data:
+            url: "{{ $.Values.global.endpoint }}"
+    asserts:
+      - equal:
+          path: data.url
+          value: "https://api.example.com"
