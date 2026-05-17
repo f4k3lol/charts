@@ -25,9 +25,11 @@ jobs:
         if: ${{ steps.release.outputs.prs_created == 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PRS_JSON: ${{ steps.release.outputs.prs }}
+          REPO: ${{ github.repository }}
         run: |
-          echo '${{ steps.release.outputs.prs }}' | jq -r '.[].number' | while read -r pr; do
-            gh pr merge --auto --squash --repo "${{ github.repository }}" "$pr"
+          echo "$PRS_JSON" | jq -r '.[].number' | while read -r pr; do
+            gh pr merge --auto --squash --repo "$REPO" "$pr"
           done
 
   release-charts:
