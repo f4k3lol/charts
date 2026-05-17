@@ -11,8 +11,6 @@
 # Override chart name in selector labels. Important in multi-dependency mode
 # to avoid label collisions between aliased subcharts.
 nameOverride: ""
-# Override the full resource name (default: release name).
-fullnameOverride: ""
 
 # [NEW] commonLabels — applied to every rendered resource's metadata.labels.
 # Useful for org-wide tags (cost center, team, part-of).

@@ -111,6 +111,6 @@ tests:
       - equal:
           path: spec.scaleTargetRef.kind
           value: Deployment
-      - matchRegex:
+      - equal:
           path: spec.scaleTargetRef.name
-          pattern: ".*-web$"
+          value: web

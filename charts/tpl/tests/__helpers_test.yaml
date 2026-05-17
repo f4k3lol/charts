@@ -8,7 +8,7 @@ tests:
   # ---------------------------------------------------------------------------
   # tpl.name
   # ---------------------------------------------------------------------------
-  - it: "tpl.name defaults to chart name"
+  - it: "resource name equals the map key"
     release:
       name: my-release
     set:
@@ -16,11 +16,11 @@ tests:
     asserts:
       - isKind:
           of: Deployment
-      - matchRegex:
+      - equal:
           path: metadata.name
-          pattern: ".*-app$"
+          value: app
 
-  - it: "tpl.name respects nameOverride"
+  - it: "tpl.name respects nameOverride (labels only, not resource name)"
     release:
       name: my-release
     set:
@@ -30,18 +30,9 @@ tests:
       - equal:
           path: metadata.labels["app.kubernetes.io/name"]
           value: custom-name
-
-  # ---------------------------------------------------------------------------
-  # tpl.fullname
-  # ---------------------------------------------------------------------------
-  - it: "tpl.fullname respects fullnameOverride"
-    set:
-      fullnameOverride: my-override
-      deployments.app.containers.app.image.repository: nginx
-    asserts:
       - equal:
           path: metadata.name
-          value: my-override-app
+          value: app
 
   # ---------------------------------------------------------------------------
   # tpl.labels — standard labels

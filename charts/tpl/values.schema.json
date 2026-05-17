@@ -9,10 +9,6 @@
       "type": "string",
       "description": "Override chart name in selector labels. Important in multi-dependency mode."
     },
-    "fullnameOverride": {
-      "type": "string",
-      "description": "Override full resource name (default: release-chart)."
-    },
     "commonLabels": {
       "type": "object",
       "description": "Labels applied to every rendered resource.",

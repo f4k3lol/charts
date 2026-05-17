@@ -19,36 +19,12 @@ Used in labels (app.kubernetes.io/name).
 {{- end }}
 
 {{/*
-tpl.fullname — base name for all resources. Priority:
-  1. fullnameOverride (if set)
-  2. release-chart (truncated to 63 chars)
-If release name already contains chart name, don't duplicate.
-*/}}
-{{- define "tpl.fullname" -}}
-{{- if .Values.fullnameOverride }}
-{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
-{{- else }}
-{{- $name := default .Chart.Name .Values.nameOverride }}
-{{- if contains $name .Release.Name }}
-{{- .Release.Name | trunc 63 | trimSuffix "-" }}
-{{- else }}
-{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
-{{- end }}
-{{- end }}
-{{- end }}
-
-{{/*
-tpl.resourceName — full resource name for a map entry.
+tpl.resourceName — resource name for a map entry. Returns the key as-is
+(truncated to 63 chars). Ownership is conveyed via labels, not name prefixes.
 Usage: include "tpl.resourceName" (dict "context" . "name" $name)
-Produces: fullname-name (or just fullname if name equals chart name).
 */}}
 {{- define "tpl.resourceName" -}}
-{{- $fullname := include "tpl.fullname" .context }}
-{{- if eq $fullname .name }}
-{{- $fullname }}
-{{- else }}
-{{- printf "%s-%s" $fullname .name | trunc 63 | trimSuffix "-" }}
-{{- end }}
+{{- .name | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
