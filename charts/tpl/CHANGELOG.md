@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/f4k3lol/charts/compare/tpl-1.2.0...tpl-v2.0.0) (2026-05-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* every resource is renamed on upgrade. Plan as a redeploy: helm uninstall + helm install (or delete the old release's resources and reinstall), since helm cannot rename in place. Selectors are unaffected (they rely on labels).
+
+### Features
+
+* resource names equal the values map key ([950d6ae](https://github.com/f4k3lol/charts/commit/950d6aeba4d9fdd4d2d78cdfe7e5186533e5b7a8))
+
 ## [1.2.0](https://github.com/f4k3lol/charts/compare/tpl-1.1.0...tpl-v1.2.0) (2026-05-17)
 
 
