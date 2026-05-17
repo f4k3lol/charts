@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/f4k3lol/charts/compare/tpl-1.1.0...tpl-v1.2.0) (2026-05-17)
+
+
+### Features
+
+* tpl-evaluate stringData/data in secret and configMap ([3d534ae](https://github.com/f4k3lol/charts/commit/3d534ae19d566b862a7e0e47d2925e842905b8ee))
+
 ## [1.1.0](https://github.com/f4k3lol/charts/compare/tpl-1.0.0...tpl-v1.1.0) (2026-05-17)
 
 
