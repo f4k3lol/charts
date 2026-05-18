@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.0](https://github.com/f4k3lol/charts/compare/tpl-2.0.0...tpl-v2.1.0) (2026-05-18)
+
+
+### Features
+
+* add Role, ClusterRole, RoleBinding, ClusterRoleBinding support ([22373f8](https://github.com/f4k3lol/charts/commit/22373f898b1b6607ad3164ba9729db2f2250c023))
+
 ## [2.0.0](https://github.com/f4k3lol/charts/compare/tpl-1.2.0...tpl-v2.0.0) (2026-05-17)
 
 
