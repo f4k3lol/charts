@@ -24,7 +24,11 @@ jobs:
       - name: Enable auto-merge on release PRs
         if: ${{ steps.release.outputs.prs_created == 'true' }}
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # PAT (not GITHUB_TOKEN) so the resulting merge commit triggers
+          # downstream workflows. GitHub suppresses workflow triggers for
+          # pushes authored by GITHUB_TOKEN to prevent loops, which would
+          # otherwise leave the release-charts job unfired on auto-merge.
+          GH_TOKEN: ${{ secrets.GH_PAT }}
           PRS_JSON: ${{ steps.release.outputs.prs }}
           REPO: ${{ github.repository }}
         run: |
