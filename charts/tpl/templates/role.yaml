@@ -1,0 +1,13 @@
+{{- range $name, $spec := .Values.roles }}
+{{- if not (and (hasKey $spec "enabled") (not $spec.enabled)) }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  {{- include "tpl.metadata" (dict "context" $ "name" $name "namespace" $spec.namespace "labels" $spec.labels "annotations" $spec.annotations) | nindent 2 }}
+{{- with $spec.rules }}
+rules:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- end }}
+{{- end }}

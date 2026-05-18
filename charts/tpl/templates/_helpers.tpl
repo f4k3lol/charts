@@ -62,11 +62,12 @@ METADATA
 
 {{/*
 tpl.metadata — common metadata block for any resource.
-Usage: include "tpl.metadata" (dict "context" . "name" $name "labels" $extraLabels "annotations" $extraAnnotations)
+Usage: include "tpl.metadata" (dict "context" . "name" $name "namespace" $nsOverride "labels" $extraLabels "annotations" $extraAnnotations)
+The "namespace" key is optional; defaults to .Release.Namespace when unset.
 */}}
 {{- define "tpl.metadata" -}}
 name: {{ include "tpl.resourceName" (dict "context" .context "name" .name) }}
-namespace: {{ .context.Release.Namespace }}
+namespace: {{ .namespace | default .context.Release.Namespace }}
 labels:
   {{- include "tpl.labels" .context | nindent 2 }}
   {{- with .labels }}

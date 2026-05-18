@@ -127,6 +127,26 @@
       "description": "Map of ServiceAccount name -> spec.",
       "additionalProperties": { "$ref": "#/$defs/serviceAccountSpec" }
     },
+    "roles": {
+      "type": "object",
+      "description": "Map of Role name -> spec.",
+      "additionalProperties": { "$ref": "#/$defs/roleSpec" }
+    },
+    "clusterRoles": {
+      "type": "object",
+      "description": "Map of ClusterRole name -> spec.",
+      "additionalProperties": { "$ref": "#/$defs/clusterRoleSpec" }
+    },
+    "roleBindings": {
+      "type": "object",
+      "description": "Map of RoleBinding name -> spec.",
+      "additionalProperties": { "$ref": "#/$defs/roleBindingSpec" }
+    },
+    "clusterRoleBindings": {
+      "type": "object",
+      "description": "Map of ClusterRoleBinding name -> spec.",
+      "additionalProperties": { "$ref": "#/$defs/clusterRoleBindingSpec" }
+    },
     "podDisruptionBudgets": {
       "type": "object",
       "description": "Map of PDB name -> spec.",
@@ -658,6 +678,53 @@
         "labels": { "type": "object", "additionalProperties": { "type": "string" } },
         "automountServiceAccountToken": { "type": "boolean" }
       }
+    },
+
+    "roleSpec": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "namespace": { "type": "string", "description": "Override target namespace (defaults to release namespace)." },
+        "labels": { "type": "object" },
+        "annotations": { "type": "object" },
+        "rules": { "type": "array", "items": { "type": "object" } }
+      }
+    },
+
+    "clusterRoleSpec": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "labels": { "type": "object" },
+        "annotations": { "type": "object" },
+        "rules": { "type": "array", "items": { "type": "object" } },
+        "aggregationRule": { "type": "object" }
+      }
+    },
+
+    "roleBindingSpec": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "namespace": { "type": "string", "description": "Override target namespace (defaults to release namespace)." },
+        "labels": { "type": "object" },
+        "annotations": { "type": "object" },
+        "roleRef": { "type": "object" },
+        "subjects": { "type": "array", "items": { "type": "object" } }
+      },
+      "required": ["roleRef", "subjects"]
+    },
+
+    "clusterRoleBindingSpec": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "labels": { "type": "object" },
+        "annotations": { "type": "object" },
+        "roleRef": { "type": "object" },
+        "subjects": { "type": "array", "items": { "type": "object" } }
+      },
+      "required": ["roleRef", "subjects"]
     },
 
     "pdbSpec": {
