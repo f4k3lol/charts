@@ -676,7 +676,11 @@
         "enabled": { "type": "boolean" },
         "annotations": { "type": "object", "additionalProperties": { "type": "string" } },
         "labels": { "type": "object", "additionalProperties": { "type": "string" } },
-        "automountServiceAccountToken": { "type": "boolean" }
+        "automountServiceAccountToken": { "type": "boolean" },
+        "imagePullSecrets": {
+          "type": "array",
+          "items": { "type": "object", "properties": { "name": { "type": "string" } }, "required": ["name"] }
+        }
       }
     },
 
