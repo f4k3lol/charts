@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/f4k3lol/charts/compare/tpl-v2.1.0...tpl-v2.2.0) (2026-05-18)
+
+
+### Features
+
+* add imagePullSecrets to ServiceAccount ([75d5be2](https://github.com/f4k3lol/charts/commit/75d5be273fbe49071a70db391c51c272f1c23de6))
+
 ## [2.1.0](https://github.com/f4k3lol/charts/compare/tpl-2.0.0...tpl-v2.1.0) (2026-05-18)
 
 
